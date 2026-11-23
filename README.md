@@ -237,3 +237,14 @@ MIT License —— 见 [LICENSE](LICENSE)
 ---
 
 *群智 v18 · 2026-11-23（数据快照 `paperlib-b21b77e32c`）*
+
+---
+
+## 开发与测试
+
+```bash
+pip install pytest
+python -m pytest -q tests
+```
+
+测试只覆盖纯函数模块（`complexity`、`review_anchors`、`input_intent`、`privacy_scrubber`），**不联网**、不调用任何外部 API。
