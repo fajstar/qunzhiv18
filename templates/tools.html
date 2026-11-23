@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>群智 · 能力平台</title>
+<style>
+:root { --primary:#2563EB; --primary-light:#DBEAFE; --accent:#0EA5E9;
+  --bg:#FAF6F0; --card:#FFFFFF; --card2:#F5F0E8; --border:#EAE3D8;
+  --text:#1F2937; --dim:#6B7280; --green:#059669; --warn:#D97706;
+  --shadow:0 2px 8px rgba(31,41,55,.05); }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Microsoft YaHei','PingFang SC',system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+.topbar { display:flex; align-items:center; justify-content:space-between; padding:14px 24px; background:var(--card); border-bottom:1px solid var(--border); box-shadow:var(--shadow); }
+.topbar h1 { font-size:18px; display:flex; align-items:center; gap:10px; }
+.logo { color:var(--primary); font-weight:800; }
+.badge { font-size:11px; background:var(--primary-light); color:var(--primary); padding:3px 10px; border-radius:14px; font-weight:600; }
+.wrap { max-width:1040px; margin:0 auto; padding:28px 24px 60px; }
+.hero { text-align:center; margin-bottom:26px; }
+.hero .t { font-size:24px; font-weight:800; color:var(--primary); margin-bottom:8px; }
+.hero .s { color:var(--dim); font-size:13.5px; line-height:1.8; }
+.grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; }
+.tool { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; box-shadow:var(--shadow); transition:all .15s; display:flex; flex-direction:column; }
+.tool:hover { border-color:var(--primary); transform:translateY(-2px); }
+.tool .ic { font-size:26px; margin-bottom:8px; }
+.tool .name { font-size:16px; font-weight:800; margin-bottom:6px; }
+.tool .desc { font-size:12.5px; color:var(--dim); line-height:1.75; flex:1; margin-bottom:14px; }
+.tool .meta { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+.pill { font-size:11px; padding:2px 8px; border-radius:12px; background:var(--card2); border:1px solid var(--border); color:var(--dim); }
+.pill.on { background:#D1FAE5; color:var(--green); border-color:#A7F3D0; font-weight:700; }
+.pill.soon { background:#FEF3C7; color:var(--warn); border-color:#FDE68A; }
+.btn { display:inline-block; text-align:center; background:var(--primary); color:#fff; text-decoration:none; padding:9px 16px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; border:none; }
+.btn:hover { background:#1D4ED8; }
+.btn.ghost { background:transparent; color:var(--dim); border:1px solid var(--border); }
+.btn.ghost:hover { color:var(--primary); border-color:var(--primary); }
+.note { margin-top:22px; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; font-size:12.5px; color:var(--dim); line-height:1.9; }
+.note b { color:var(--text); }
+.note code { background:var(--card2); padding:1px 6px; border-radius:5px; color:var(--text); }
+
+/* ================= 开场动画（群智叙事） ================= */
+#qz-intro { position:fixed; inset:0; z-index:99999; background:#080D18; overflow:hidden;
+  transition:opacity .6s; display:flex; align-items:center; justify-content:center; color:#E6EDF8; }
+#qz-intro.out { opacity:0; pointer-events:none; }
+#qz-cv { position:absolute; inset:0; }
+#qz-skip { position:absolute; right:22px; bottom:22px; z-index:6; font-size:12px; color:#8FA6C8;
+  border:1px solid rgba(143,166,200,.35); padding:6px 14px; border-radius:20px; cursor:pointer; background:transparent; }
+#qz-skip:hover { color:#fff; border-color:#8FB8FF; }
+.qz-step { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  opacity:0; transition:opacity .8s, transform .8s; transform:translateY(14px); text-align:center; padding:0 24px; }
+.qz-step.on { opacity:1; transform:translateY(0); }
+.qz-step .big { font-size:clamp(26px,5vw,52px); font-weight:800; letter-spacing:.04em; line-height:1.35; }
+.qz-step .sub { margin-top:14px; font-size:clamp(13px,1.6vw,16px); color:#93A7C6; line-height:1.9; }
+.qz-step .one { font-size:clamp(20px,3.4vw,34px); font-weight:700; color:#BFD4F5; }
+.qz-accent { color:#7FB0FF; }
+.qz-tools { display:flex; gap:14px; margin-top:26px; flex-wrap:wrap; justify-content:center; }
+.qz-tool { border:1px solid rgba(127,176,255,.35); background:rgba(30,50,90,.35); border-radius:12px;
+  padding:12px 18px; font-size:13px; color:#CFE0FA; min-width:150px; }
+.qz-tool b { display:block; font-size:14px; margin-bottom:4px; color:#fff; }
+.qz-go { margin-top:30px; background:linear-gradient(135deg,#4C86F0,#2E6BE6); color:#fff; border:none;
+  padding:12px 30px; border-radius:26px; font-size:15px; font-weight:700; cursor:pointer;
+  box-shadow:0 8px 30px rgba(46,107,230,.45); }
+@media (max-width:768px){ .wrap{padding:18px 14px 40px} .hero .t{font-size:19px} .grid{grid-template-columns:1fr}
+  .qz-tool{min-width:120px; padding:10px 12px} }
+</style>
+</head>
+<body>
+
+<!-- 开场动画 -->
+<div id="qz-intro">
+  <canvas id="qz-cv"></canvas>
+  <div class="qz-step" id="qz-1">
+    <div class="one">一个决定，常常只有<span class="qz-accent">一种视角</span></div>
+    <div class="sub">你听到的是自己的回声，还是别人的判断？</div>
+  </div>
+  <div class="qz-step" id="qz-2">
+    <div class="big"><span class="qz-accent">群智</span></div>
+    <div class="sub">六个不同专业与性格的视角，在一次讨论里相遇</div>
+  </div>
+  <div class="qz-step" id="qz-3">
+    <div class="big">不是让 AI 替你回答<br>而是让它<span class="qz-accent">替你先吵一遍</span></div>
+    <div class="qz-tools">
+      <div class="qz-tool"><b>决策预演</b>六人讨论 · 联网补料</div>
+      <div class="qz-tool"><b>文档问题发现</b>逐句核对 · 带原文锚点</div>
+      <div class="qz-tool"><b>检索与盲评</b>材料可引 · 打分有据</div>
+    </div>
+  </div>
+  <div class="qz-step" id="qz-4">
+    <div class="big">说得出的结论，<span class="qz-accent">都要能点回原文</span></div>
+    <div class="sub">这是群智的全部纪律：可核验，才敢交付。</div>
+    <button class="qz-go" id="qz-go">进入能力平台 →</button>
+  </div>
+  <button id="qz-skip">跳过</button>
+</div>
+
+<div class="topbar">
+  <h1><span class="logo">群智</span> · 能力平台 <span class="badge">ecosystem</span></h1>
+  <div style="font-size:12px;color:var(--dim)">一个入口 · 按需选能力 · 也可用 API 接入</div>
+</div>
+
+<div class="wrap">
+  <div class="hero">
+    <div class="t">不是一个大而全的工具，而是一组能组合的能力</div>
+    <div class="s">选你要做的事，进入对应工具；也可以直接用 <code style="background:var(--card2);padding:1px 6px;border-radius:5px">/api/tools</code> 接进你自己的 AI 工作流。</div>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div class="note">
+    <b>说明</b><br>
+    · 决策预演：6 个不同专业/性格的 AI 成员多轮讨论 + 主教练联网补料 → 决策预演报告（约 2–4 分钟）。<br>
+    · 文档问题发现：上传论文 → 带原文锚点的问题清单 + 改法 + 验收 + 合规提醒 + 图表核对（约 40–80 秒）。<br>
+    · 外部接入：<code>GET /api/tools</code> 发现能力，<code>POST /api/tools/{id}/run</code> 统一执行（需口令）。
+  </div>
+</div>
+
+<script>
+// ===== 开场动画：粒子汇聚成「群智」，然后逐幕叙事 =====
+(function () {
+  const KEY = "qz_intro_v1_done";
+  const box = document.getElementById("qz-intro");
+  if (localStorage.getItem(KEY) === "1") { box.style.display = "none"; return; }
+
+  const cv = document.getElementById("qz-cv");
+  const ctx = cv.getContext("2d");
+  let W, H, pts = [], t0 = performance.now(), stage = 0;
+
+  function resize() {
+    W = cv.width = innerWidth * devicePixelRatio;
+    H = cv.height = innerHeight * devicePixelRatio;
+    cv.style.width = innerWidth + "px";
+    cv.style.height = innerHeight + "px";
+    build();
+  }
+  // 用 canvas 文本取点，聚成「群智」二字
+  function build() {
+    pts = [];
+    const off = document.createElement("canvas");
+    const octx = off.getContext("2d");
+    const size = Math.min(innerWidth, innerHeight * 1.2);
+    off.width = size; off.height = size * 0.7;
+    octx.fillStyle = "#fff";
+    octx.font = `800 ${Math.floor(off.height * 0.62)}px "Microsoft YaHei",sans-serif`;
+    octx.textAlign = "center";
+    octx.textBaseline = "middle";
+    octx.fillText("群智", off.width / 2, off.height / 2);
+    const data = octx.getImageData(0, 0, off.width, off.height).data;
+    const gap = Math.max(3, Math.floor(size / 120));
+    for (let y = 0; y < off.height; y += gap) {
+      for (let x = 0; x < off.width; x += gap) {
+        const a = data[(y * off.width + x) * 4 + 3];
+        if (a > 140) {
+          pts.push({
+            tx: (x - off.width / 2) * devicePixelRatio + W / 2,
+            ty: (y - off.height / 2) * devicePixelRatio + H / 2,
+            x: Math.random() * W, y: Math.random() * H,
+            s: 0.6 + Math.random() * 1.6, a: 0.35 + Math.random() * 0.65
+          });
+        }
+      }
+    }
+  }
+  resize();
+  addEventListener("resize", resize);
+
+  function draw(now) {
+    const t = (now - t0) / 1000;
+    ctx.fillStyle = "rgba(8,13,24,.32)";
+    ctx.fillRect(0, 0, W, H);
+    const conv = Math.min(1, t / 2.2);            // 2.2 秒汇聚
+    const ease = 1 - Math.pow(1 - conv, 3);
+    for (const p of pts) {
+      p.x += (p.tx - p.x) * 0.02 * (0.35 + ease * 1.6);
+      p.y += (p.ty - p.y) * 0.02 * (0.35 + ease * 1.6);
+      ctx.beginPath();
+      ctx.fillStyle = `rgba(${120 + p.a * 80},${170 + p.a * 60},${255},${p.a * (0.45 + ease * 0.55)})`;
+      ctx.arc(p.x, p.y, p.s * devicePixelRatio, 0, 6.3);
+      ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+
+  const steps = ["qz-1", "qz-2", "qz-3", "qz-4"].map(id => document.getElementById(id));
+  const times = [200, 1600, 3600, 6200];
+  const timers = times.map((ms, i) => setTimeout(() => {
+    steps.forEach(s => s.classList.remove("on"));
+    steps[i].classList.add("on");
+  }, ms));
+
+  function finish() {
+    timers.forEach(clearTimeout);
+    localStorage.setItem(KEY, "1");
+    box.classList.add("out");
+    setTimeout(() => { box.style.display = "none"; }, 620);
+  }
+  document.getElementById("qz-go").onclick = finish;
+  document.getElementById("qz-skip").onclick = finish;
+  setTimeout(finish, 9500);   // 最长 9.5 秒自动进入
+})();
+
+// ===== 能力卡片 =====
+const TOOLS = [
+  { id:"v15", ic:"🧠", name:"群智 · 决策预演", ver:"v15",
+    desc:"6 个不同专业/性格的 AI 成员，信息不对称下多轮讨论 + 主教练联网补料 + 三评审打分，输出决策预演报告。",
+    tags:["多智能体","联网检索","决策报告"], status:"on", url:"/", demo:"/demo" },
+  { id:"v18", ic:"📄", name:"群智 · 文档问题发现", ver:"v18",
+    desc:"上传论文 PDF/LaTeX → 带逐字原文锚点的问题清单 + 改法 + 验收标准 + 合规提醒 + 图表核对。",
+    tags:["可核验","原文锚点","作者自查"], status:"on", url:"/v18/", demo:null },
+  { id:"search", ic:"🔎", name:"群智 · 检索装置", ver:"v15",
+    desc:"多源学术检索（中文核心 / arXiv / NCPSSD 等），把检索结果整理成可引用的材料。",
+    tags:["多源检索","材料整理"], status:"soon", url:null, demo:null },
+  { id:"review", ic:"🧾", name:"群智 · 盲评与回收", ver:"v15",
+    desc:"三人盲评问卷、回收统计与一致性（α）计算，用于小样本评测。",
+    tags:["盲评","一致性"], status:"soon", url:null, demo:null }
+];
+
+fetch("/api/tools").then(r => r.json()).then(j => {
+  const list = (j && j.tools && j.tools.length) ? j.tools : TOOLS;
+  render(list);
+}).catch(() => render(TOOLS));
+
+function render(list) {
+  document.getElementById("grid").innerHTML = list.map(t => `
+    <div class="tool">
+      <div class="ic">${t.ic || "🧩"}</div>
+      <div class="name">${t.name} <span class="pill">${t.ver || ""}</span></div>
+      <div class="desc">${t.desc || ""}</div>
+      <div class="meta">
+        ${(t.tags || []).map(x => `<span class="pill">${x}</span>`).join("")}
+        <span class="pill ${t.status === "on" ? "on" : "soon"}">${t.status === "on" ? "可用" : "即将上线"}</span>
+      </div>
+      <div>
+        ${t.url ? `<a class="btn" href="${t.url}">进入工具</a>` : `<span class="btn ghost">敬请期待</span>`}
+        ${t.demo ? ` <a class="btn ghost" href="${t.demo}">一键体验</a>` : ""}
+      </div>
+    </div>`).join("");
+}
+</script>
+<script src="/static/qz-nav.js"></script>
+</body>
+</html>

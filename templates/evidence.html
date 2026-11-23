@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>证据高亮 · 群智</title>
+<link rel="stylesheet" href="/static/wb.css">
+<style>
+  /* ---------- 通用徽章 ---------- */
+  .tag{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:999px;
+    font-size:11.5px;font-weight:700;letter-spacing:.04em;border:1px solid transparent;line-height:1.7}
+  .c-EXP{background:#E9EEF7;color:#2B4C7E}
+  .c-MTH{background:#E3F0EE;color:#1F6F6B}
+  .c-PRS{background:#F8EFDC;color:#8A6212}
+  .c-CMP{background:#FBE9E5;color:#A8341F}
+  .c-DEF{background:var(--paper-2);color:var(--dim)}
+
+  /* ---------- 报告头卡 ---------- */
+  .ev-head{display:flex;gap:20px;align-items:flex-start;justify-content:space-between;background:#fff;
+    border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:18px 20px;margin-bottom:12px}
+  .ev-kicker{font-size:11px;letter-spacing:.22em;color:var(--dim);margin-bottom:9px}
+  .ev-title{font-size:20px;line-height:1.5;font-weight:800;margin:0 0 12px;letter-spacing:.01em;max-width:62ch}
+  .ev-meta{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-2)}
+  .ev-field{background:var(--paper-2);color:var(--ink-2);border-color:var(--line);font-weight:600}
+  .ev-rate b{font-family:var(--mono);font-weight:800;color:var(--accent);font-size:13px}
+  .ev-bar{display:inline-block;width:118px;height:3px;background:var(--paper-2);border-radius:999px;
+    overflow:hidden;vertical-align:2px}
+  .ev-bar>i{display:block;height:100%;border-radius:999px;background:var(--accent)}
+  .ev-acts{display:flex;gap:8px;flex:0 0 auto;flex-wrap:wrap;justify-content:flex-end}
+
+  /* ---------- 结论摘要 ---------- */
+  .ev-sum{display:flex;align-items:center;gap:9px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);
+    border-radius:12px;box-shadow:var(--shadow);padding:11px 16px;margin-bottom:16px}
+  .ev-sum .lab{font-size:11px;letter-spacing:.14em;color:var(--dim)}
+
+  /* ---------- 问题卡 ---------- */
+  .item{display:flex;gap:14px;align-items:flex-start;background:#fff;border:1px solid var(--line);
+    border-radius:12px;padding:14px 16px;margin-bottom:12px;box-shadow:var(--shadow)}
+  .item.miss{opacity:.65;filter:saturate(.55)}
+  .ev-cls{flex:0 0 64px;display:flex;flex-direction:column;align-items:center;gap:2px;
+    padding:7px 4px;border-radius:10px;font-family:var(--mono);font-size:12.5px;font-weight:800;letter-spacing:.04em}
+  .ev-cls small{font-size:10px;font-weight:600;letter-spacing:.02em;font-family:inherit;opacity:.8}
+  .ibody{flex:1;min-width:0}
+  .item .t{font-size:14px;line-height:1.6}
+
+  /* 原文引用块：浅黄底 + 左侧竖线。QBUG-016：不再 3 行截断，
+     手机上也能读完整句（接口给的引用本身约 220 字）。 */
+  .hl{display:block;overflow:visible;max-height:none;
+    background:#FFFAEB;border:0;border-left:3px solid #D9A93A;border-radius:0 8px 8px 0;
+    padding:9px 13px;margin-top:10px;font-size:13px;line-height:1.75;color:#5C4A1E;word-break:break-word}
+  .hl mark{background:#FFE08A;color:#5A3E00;padding:1px 2px;border-radius:3px}
+
+  .meta2{font-size:11.5px;color:var(--dim);margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .meta2 .off{font-family:var(--mono)}
+  .ok{color:var(--ok);font-weight:700}.bad{color:var(--bad);font-weight:700}
+
+  @media(max-width:760px){
+    .ev-head{flex-direction:column;gap:14px}
+    .ev-acts{justify-content:flex-start}
+    .ev-title{font-size:17px}
+  }
+</style>
+</head>
+<body>
+<div class="page" style="max-width:1000px;margin:0 auto">
+  <div class="page-head">
+    <h1>证据高亮</h1>
+    <div class="lead">每条问题都在原文里标出来——这就是“可核验”和“大模型说的话”的区别。</div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <input id="pid" type="text" placeholder="论文 pid，如 ax_2510.19425" style="flex:2" value="ax_2510.19425">
+      <select id="n" style="flex:1"><option>6</option><option>8</option><option>12</option></select>
+      <button class="btn accent" id="go">开始检查</button>
+      <button class="btn ghost" id="demo">用示例论文试一下</button>
+    </div>
+    <div id="status" class="hint" style="margin-top:8px">示例论文已预填，点「开始检查」即可；新论文约 30–60 秒（要跑一次 v18 引擎）</div>
+    <div class="hint" id="sampleHint" style="margin-top:2px;font-size:11.5px;color:#8A8579">
+      当前示例：<b>Neural Variational Dropout Processes</b>（cs.LG，2025）——跑完会看到十几条带原文位置的问题
+    </div>
+  </div>
+
+  <div id="out"></div>
+</div>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const CLS_LABEL = {EXP:"实验",MTH:"方法",PRS:"表述",CMP:"完整"};
+const clsKey = c => "c-" + (String(c||"").toUpperCase().replace(/[^A-Z]/g,"").slice(0,4) || "DEF");
+const KEY = k => k === "EXP" || k === "MTH" || k === "PRS" || k === "CMP" ? k : "DEF";
+let last = null;
+
+function render(j){
+  const items = j.items || [];
+  const total = j.n || items.length;
+  const anchored = j.anchored==null ? items.filter(x=>x.found).length : j.anchored;
+  const pct = total ? Math.round(anchored / total * 100) : 0;
+  const cnt = {};
+  items.forEach(x => { const k = KEY((x.cls||"").toUpperCase()); cnt[k] = (cnt[k]||0) + 1; });
+  last = {title:j.title, field:j.field, anchored, total, items, sum:cnt};
+
+  const head = `
+    <div class="ev-head">
+      <div>
+        <div class="ev-kicker">论文体检报告 · 证据锚定</div>
+        <h2 class="ev-title">${esc(j.title) || "（无标题）"}</h2>
+        <div class="ev-meta">
+          <span class="tag ev-field">${esc(j.field || "未分类")}</span>
+          <span class="ev-rate"><b>${anchored}/${total}</b> 条已锚定原文</span>
+          <span class="ev-bar"><i style="width:${pct}%"></i></span>
+          <span class="mono">${pct}%</span>
+        </div>
+      </div>
+      <div class="ev-acts">
+        <a class="btn ghost" id="readLink" href="#" target="_blank" rel="noopener">读原文 ↗</a>
+        <button class="btn ghost" id="copy">复制报告</button>
+      </div>
+    </div>`;
+
+  const sum = items.length ? `
+    <div class="ev-sum">
+      <span class="lab">结论摘要</span>
+      ${Object.entries(cnt).sort((a,b)=>b[1]-a[1]).map(([k,v]) =>
+        `<span class="tag ${k==="DEF" ? "c-DEF" : "c-"+k}">${k==="DEF"?"其他":k} ${v}</span>`).join('<span class="lab">·</span>')}
+      <span class="lab">共 ${items.length} 条</span>
+    </div>` : "";
+
+  const list = items.map(x => {
+    const k = (x.cls||"").toUpperCase().replace(/[^A-Z]/g,"").slice(0,4);
+    const body = x.html ? x.html : esc(x.quote || "");
+    return `
+      <div class="item ${x.found ? "" : "miss"}">
+        <div class="ev-cls ${clsKey(x.cls)}">${esc(k) || "—"}<small>${CLS_LABEL[k] || ""}</small></div>
+        <div class="ibody">
+          <div class="t">${esc(x.issue)}</div>
+          ${body ? `<div class="hl">${x.html ? "…" + body + "…" : body}</div>` : ""}
+          <div class="meta2">
+            <span>${x.found ? '<span class="ok">已锚定</span>' : '<span class="bad">未找到原文</span>'}</span>
+            <span class="off">偏移：${x.offset==null ? "—" : x.offset}</span>
+          </div>
+        </div>
+      </div>`;
+  }).join("");
+
+  $("#out").innerHTML = head + sum + (list || '<div class="empty">未返回问题条目。</div>');
+
+  const __readEl = document.getElementById("readLink");
+  if (__readEl) {
+    const __pid = (document.getElementById("pid").value || "").trim();
+    var __line = new URLSearchParams(location.search).get("line") || "1";
+    __readEl.href = "/read?pid=" + encodeURIComponent(__pid) + "&biz=" + encodeURIComponent(__line);
+    __readEl.style.display = __pid ? "" : "none";
+  }
+  if (window.QZNav) { window.QZNav.refresh(); window.QZNav.setTitle(j.title || j.pid); }
+  $("#copy").onclick = async () => {
+    const txt = [last.title || "", `领域：${last.field || "—"}`,
+      `锚定：${last.anchored}/${last.total} 条`,
+      Object.entries(last.sum).map(([k,v]) => `${k} ${v}`).join(" · "),
+      "", ...last.items.map((x,i) =>
+        `${i+1}. [${x.cls}] ${x.issue}\n   原文：${(x.quote||"").replace(/\s+/g," ")}\n   状态：${x.found?"已锚定":"未找到原文"}｜偏移 ${x.offset==null?"—":x.offset}`
+      )].join("\n");
+    try { await copyText(txt); $("#copy").textContent = "已复制 ✓"; }
+    catch(e) { $("#copy").textContent = "复制失败"; }
+    setTimeout(() => { $("#copy").textContent = "复制报告"; }, 1800);
+  };
+}
+
+async function copyText(t){
+  if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(t);
+  const ta = document.createElement("textarea");
+  ta.value = t; ta.style.position = "fixed"; ta.style.opacity = "0";
+  document.body.appendChild(ta); ta.select();
+  const ok = document.execCommand("copy"); ta.remove();
+  if (!ok) throw new Error("copy 不支持");
+}
+
+$("#go").onclick = async () => {
+  const pid = $("#pid").value.trim();
+  if(!pid){ alert("请输入 pid"); return; }
+
+  $("#status").innerHTML = '<span class="spin"></span> 正在调用 v18 引擎（生成问题清单）→ 在全文里逐条定位原文…约 30–60 秒';
+  // 进度文案轮换，减少等待焦虑
+  if (window.__qzWaitTimer) clearInterval(window.__qzWaitTimer);
+  var __steps = ["① 生成问题清单…", "② 每条问题回原文找依据…", "③ 校验锚点位置…"];
+  var __i = 0;
+  window.__qzWaitTimer = setInterval(function () {
+    if (__i >= __steps.length) { clearInterval(window.__qzWaitTimer); return; }
+    $("#status").innerHTML = '<span class="spin"></span> ' + __steps[__i++];
+  }, 9000);
+  $("#out").innerHTML = "";
+  try{
+    // 24 小时缓存：同一篇第二次打开秒出
+    const ck = "qz.evidence." + pid;
+    try {
+      const hit = JSON.parse(localStorage.getItem(ck) || "null");
+      if (hit && hit.t && (Date.now() - hit.t) < 86400000 && hit.d && hit.d.pid === pid) {
+        $("#status").textContent = "（来自本地缓存）" + (hit.d.title || "");
+        render(hit.d);
+        $("#status").textContent = (hit.d.title || "") + "｜" + (hit.d.field || "") + "｜" + (hit.d.anchored || 0) + "/" + (hit.d.n || 0) + " 条锚定";
+        return;
+      }
+    } catch (e) {}
+
+    const r = await fetch("/api/evidence", {
+      method:"POST", headers:{"Content-Type":"application/json", "X-Access-Key":"__QZ_DEMO_KEY__"},
+      body: JSON.stringify({pid:pid, max_items: parseInt($("#n").value)})
+    });
+    const j = await r.json();
+    if(!r.ok) throw new Error(j.detail || ("HTTP "+r.status));
+    // 2026-11-21（Bug 3）：引擎超时/失败现在返回 HTTP 200 + ok=false + degraded=true，
+    // 必须如实提示，不能当成“没有发现问题”渲染成空列表。
+    if(j && j.ok === false) throw new Error(j.detail || j.error || "引擎未返回结果");
+    try { localStorage.setItem("qz.evidence." + pid, JSON.stringify({ t: Date.now(), d: j })); } catch (e) {}
+    if (window.__qzWaitTimer) { clearInterval(window.__qzWaitTimer); window.__qzWaitTimer = null; }
+    $("#status").textContent = `${j.title}｜${j.field}｜找到 ${j.anchored}/${j.n} 条原文锚点`;
+    render(j);
+  }catch(e){
+    if (window.__qzWaitTimer) { clearInterval(window.__qzWaitTimer); window.__qzWaitTimer = null; }
+    $("#status").textContent = "失败：" + e.message;
+  }
+};
+
+
+  // 用示例论文一键跑
+  var __demo = document.getElementById("demo");
+  if (__demo) __demo.onclick = function () {
+    document.getElementById("pid").value = "ax_2510.19425";
+    document.getElementById("go").click();
+  };
+
+// QBUG-008：带 pid 的深链直接取证据（/read 的「看问题清单」、qz-nav 都是这么进来的），
+// 不再要求用户落地后再点一次；?auto=0 可显式关闭（方便先改 pid 再跑）。
+const _p = new URLSearchParams(location.search);
+if (_p.get('pid')) {
+  document.getElementById('pid').value = _p.get('pid');
+  var _sh = document.getElementById('sampleHint');
+  if (_sh) _sh.innerHTML = '已带入论文 <b>' + esc(_p.get('pid')) + '</b>；打开即自动取证据，结果会缓存 24 小时。';
+  if (_p.get('auto') !== '0') {
+    var _st = document.getElementById('status');
+    if (_st) _st.textContent = '已带入 pid，正在自动调用 /api/evidence…';
+    setTimeout(function () { document.getElementById('go').click(); }, 60);
+  }
+}
+</script>
+<script src="/static/qz-nav.js"></script>
+</body>
+</html>

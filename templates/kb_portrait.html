@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>群智 · 领域做法画像</title>
+<link rel="stylesheet" href="/static/qz.css">
+<style>
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  td,th{padding:6px 8px;border-bottom:1px solid var(--border);text-align:center}
+  td:first-child,th:first-child{text-align:left}
+  th{color:var(--dim);font-size:12px}
+  .hi{background:#EFF6FF;font-weight:700}
+  .legend{font-size:12px;color:var(--dim);margin-top:8px}
+</style>
+</head>
+<body>
+<div class="qz-top">
+  <div class="qz-title"><span class="qz-logo">群智</span> · 领域做法画像 <span class="qz-badge" id="ftBadge">36.6 万篇全文</span> <span id="ftCall"></span></div>
+  <div><a class="qz-link" href="/kb">检索</a> · <a class="qz-link" href="/kb/selfcheck">投稿前自检</a></div>
+</div>
+<div class="qz-wrap">
+  <div class="qz-card">
+    <h3>📊 各领域「做了某件事」的比例</h3>
+    <div class="qz-muted" style="margin-bottom:10px">从全文用规则匹配统计；用于判断"某个缺失"在同行里是硬伤还是常态。</div>
+    <div style="overflow-x:auto"><table id="tbl"><thead id="head"></thead><tbody id="body"></tbody></table></div>
+    <div class="legend" id="legend"></div>
+  </div>
+</div>
+<script src="/static/qz.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+qz.boot();
+const NAME = {ablation:"消融",hyperparameter:"超参",significance:"显著性",limitations:"局限性",
+  code:"代码",ci:"CI/误差条",seed:"随机种子",multiple_runs:"多次运行",baseline_table:"基线表",
+  dataset_stats:"数据统计",compute_budget:"算力",human_eval:"人工评测",cross_val:"交叉验证",
+  released_data:"公开数据",ethics:"伦理"};
+(async () => {
+  try {
+    const j = await (await fetch("/api/kb/baseline2?key=__QZ_DEMO_KEY__")).json();
+    const resp = await (await fetch("/api/kb/baseline2?key=__QZ_DEMO_KEY__")).json();
+    const fields = resp.fields || [];
+    const cols = [];
+    for (const f of fields) {
+      const d = await (await fetch(`/api/kb/baseline2?field=${f}&key=__QZ_DEMO_KEY__`)).json();
+      cols.push({field: f, n: d.n, rates: d.rates || {}});
+    }
+    const keys = ["ablation","hyperparameter","significance","limitations","code","ci","seed","multiple_runs"];
+    $("head").innerHTML = "<tr><th>做法</th>" + cols.map(c => `<th>${c.field}<br><span style="font-weight:400">${c.n.toLocaleString()} 篇</span></th>`).join("") + "</tr>";
+    $("body").innerHTML = keys.map(k => {
+      const vals = cols.map(c => (c.rates[k] || {}).pct ?? 0);
+      const mx = Math.max(...vals);
+      return "<tr><td>" + (NAME[k] || k) + "</td>" + vals.map(v =>
+        `<td class="${v === mx ? "hi" : ""}">${v}%</td>`).join("") + "</tr>";
+    }).join("");
+    $("legend").textContent = "高亮 = 该做法在该领域中最普遍；空白表示该领域样本不足 30 篇。";
+  } catch (e) {
+    $("tbl").outerHTML = '<div class="qz-muted">加载失败：' + e.message + '</div>';
+  }
+})();
+</script>
+<script>
+// 2026-11-22 BUG-003：全库规模统一从 /api/kb/stats 读。
+fetch("/api/kb/stats", {cache:"no-store"}).then(r=>r.json()).then(j=>{
+  if (!j || !j.ok) return;
+  var b = document.getElementById("ftBadge");
+  if (b) { b.textContent = qz.wan(j.fulltext) + "篇全文"; b.title = "fulltext = " + qz.num(j.fulltext) + "（pid 去重）"; }
+  var c = document.getElementById("ftCall");
+  if (c) c.innerHTML = qz.callBadge(j, "库统计");
+}).catch(()=>{});
+</script>
+</body>
+</html>

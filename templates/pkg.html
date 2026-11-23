@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>群智 · 论文包检查</title>
+<link rel="stylesheet" href="/static/qz.css">
+<style>
+  .drop{border:2px dashed var(--border);border-radius:14px;padding:38px 20px;text-align:center;background:var(--card);cursor:pointer;transition:.15s}
+  .drop:hover{border-color:var(--primary);background:var(--primary-light)}
+  .drop.on{border-color:var(--primary);background:var(--primary-light)}
+  .muted2{color:var(--dim);font-size:12.5px}
+  .kpi{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+  .kpi>div{flex:1;min-width:110px;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+  .kpi .v{font-size:20px;font-weight:800;color:var(--primary)}
+  .kpi .l{font-size:11px;color:var(--dim)}
+</style>
+</head>
+<body>
+<div class="qz-top">
+  <div class="qz-title"><span class="qz-logo">群智</span> · 论文包检查 <span class="qz-badge">v18 新维度</span></div>
+  <div><a class="qz-link" href="/tools">能力平台</a> · <a class="qz-link" href="/kb">论文库</a></div>
+</div>
+<div class="qz-wrap">
+  <div class="qz-card">
+    <h3>📦 上传一个「论文包」（zip：论文 + 代码 + 数据 + 文档）</h3>
+    <div class="drop" id="drop">
+      <div style="font-size:15px;font-weight:700">把 zip 拖到这里，或点击选择</div>
+      <div class="muted2" style="margin-top:6px">不是单篇论文，而是整包材料：申报书、文档、代码、实验数据一起看</div>
+      <input id="file" type="file" accept=".zip" style="display:none">
+    </div>
+    <div id="status" class="muted2" style="margin-top:10px">等待上传</div>
+    <div class="kpi" id="kpi" style="display:none"></div>
+  </div>
+  <div class="qz-card muted2">
+    检查内容：文件清单与角色分类（叙事/配置/入口/支撑）→ 引用与依赖图 → 核心文件 → 疑点清单（每条带定位）。
+    纯规则、秒级完成，不需要 GPU。
+  </div>
+</div>
+<script src="/static/qz.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+qz.boot();
+// ?job=xxx 直接续到分诊结果（URL 状态参数）
+(function () {
+  const j = new URLSearchParams(location.search).get("job");
+  if (j && /^[A-Za-z0-9._-]+$/.test(j)) location.replace("/pkg/" + encodeURIComponent(j));
+})();
+const drop = $("drop"), fileInput = $("file");
+drop.onclick = () => fileInput.click();
+drop.ondragover = e => { e.preventDefault(); drop.classList.add("on"); };
+drop.ondragleave = () => drop.classList.remove("on");
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove("on"); if (e.dataTransfer.files[0]) upload(e.dataTransfer.files[0]); };
+fileInput.onchange = () => { if (fileInput.files[0]) upload(fileInput.files[0]); };
+
+async function upload(f) {
+  if (!f.name.toLowerCase().endsWith(".zip")) { $("status").textContent = "请上传 .zip 包"; return; }
+  $("status").textContent = `上传中：${f.name}（${Math.round(f.size/1024/1024)} MB）…`;
+  const fd = new FormData(); fd.append("file", f);
+  try {
+    const r = await fetch("/api/pkg/analyze?key=__QZ_DEMO_KEY__", { method: "POST", body: fd });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.detail || ("HTTP " + r.status));
+    $("status").innerHTML = `✅ 分析完成，<a href="/pkg/${j.job}" style="color:var(--primary);font-weight:700">查看报告 →</a>`;
+    if (window.QZNav) {
+      window.QZNav.setJob(j.job);
+      window.QZNav.setNext("/pkg/" + encodeURIComponent(j.job) + "?job=" + encodeURIComponent(j.job), "分诊结果");
+      window.QZNav.setSecondary("/pkg/" + encodeURIComponent(j.job) + "?job=" + encodeURIComponent(j.job), "查看报告");
+    }
+    // 让「继续上次」直接落到这个包的分诊结果，而不是上传页
+    try {
+      const it = { href: "/pkg/" + j.job, title: "申报包 " + j.job, line: "整包检查", step: "分诊结果",
+                   meta: "整包检查 › 分诊结果", t: Date.now() };
+      localStorage.setItem("qz_last", JSON.stringify(it));
+      let arr = [];
+      try { arr = JSON.parse(localStorage.getItem("qz_recent") || "[]") || []; } catch (e) { arr = []; }
+      if (!Array.isArray(arr)) arr = [];
+      arr = [it].concat(arr.filter(x => x && x.href !== it.href)).slice(0, 8);
+      localStorage.setItem("qz_recent", JSON.stringify(arr));
+    } catch (e) {}
+    $("kpi").style.display = "flex";
+    // Bug3：图边 = 文件依赖边 + import 边；数字与口径一起展示，补全括号，避免只给一个裸数字。
+    const edges = j.edges || {};
+    const nFileEdge = Number(edges.file || 0);
+    const nImportEdge = Number(edges.import || 0);
+    const nEdge = nFileEdge + nImportEdge;
+    const fmt = (n) => Number(n).toLocaleString("zh-CN");
+    $("kpi").innerHTML = `
+      <div><div class="v">${fmt(j.files || 0)}</div><div class="l">文件</div></div>
+      <div><div class="v">${fmt((j.roles||{}).narrative || 0)}</div><div class="l">叙事</div></div>
+      <div><div class="v">${fmt((j.roles||{}).config || 0)}</div><div class="l">配置</div></div>
+      <div><div class="v">${fmt((j.roles||{}).entry || 0)}</div><div class="l">入口</div></div>
+      <div title="图边 ${fmt(nEdge)} 条 = 文件依赖 ${fmt(nFileEdge)} + import ${fmt(nImportEdge)}">
+        <div class="v">${fmt(nEdge)}</div>
+        <div class="l">图边（文件 ${fmt(nFileEdge)} + 导入 ${fmt(nImportEdge)}）</div>
+      </div>`;
+  } catch (e) {
+    $("status").textContent = "失败：" + e.message;
+  }
+}
+</script>
+<script src="/static/qz-nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>综述台 · 文献整理与综述工作台</title>
+<meta name="description" content="综述台是一个开箱即用的文献工作台：导入 BibTeX / RIS / CSV，自动做中英混合 TF-IDF 主题聚类、精读矩阵、查重与体检，并一键生成带编号引用的综述草稿（GB/T 7714 / APA）。纯前端运行，数据留在你自己的浏览器里。">
+<meta name="color-scheme" content="light dark">
+<meta property="og:title" content="综述台 · 文献整理与综述工作台">
+<meta property="og:description" content="导入文献 → 自动主题聚类 → 精读矩阵 → 生成综述草稿，全程在浏览器里完成。">
+<meta property="og:type" content="website">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<a class="skip" href="#stage">跳到工作区</a>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">综</span>
+      <span class="brand-text">
+        <strong>综述台</strong>
+        <em>ReviewBench · 文献整理与综述工作台</em>
+      </span>
+    </div>
+
+    <p class="tally" id="tally" aria-live="polite">载入中…</p>
+
+    <div class="topbar-actions">
+      <button class="btn btn-ghost" id="btn-demo" type="button">载入示例库</button>
+      <button class="btn btn-ghost" id="btn-help" type="button" aria-haspopup="dialog">使用说明</button>
+      <button class="btn btn-ghost btn-icon" id="btn-theme" type="button" aria-label="切换到深色主题"></button>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <aside class="rail" id="rail" aria-label="文献列表">
+      <div class="rail-head">
+        <label class="search">
+          <span class="sr-only">搜索文献</span>
+          <span class="search-icon" id="icon-search" aria-hidden="true"></span>
+          <input id="q" type="search" placeholder="标题 / 作者 / 关键词 / 摘要" autocomplete="off" spellcheck="false">
+        </label>
+        <button class="btn btn-ghost btn-icon rail-close" id="btn-rail-close" type="button" aria-label="收起文献列表">✕</button>
+      </div>
+
+      <div class="filters">
+        <div class="chips" id="status-chips" role="group" aria-label="按阅读状态筛选"></div>
+        <div class="filter-row">
+          <label class="field">
+            <span>年份 ≥</span>
+            <input id="year-from" type="number" min="1900" max="2100" step="1" placeholder="不限" inputmode="numeric">
+          </label>
+          <label class="field">
+            <span>排序</span>
+            <select id="sort">
+              <option value="year-desc">年份 ↓</option>
+              <option value="year-asc">年份 ↑</option>
+              <option value="title">标题 A→Z</option>
+              <option value="relevance">相关度</option>
+              <option value="unread">未读优先</option>
+            </select>
+          </label>
+        </div>
+        <p class="filter-note" id="filter-note"></p>
+      </div>
+
+      <div class="list" id="list" role="listbox" aria-label="文献条目" tabindex="0"></div>
+
+      <div class="rail-foot">
+        <div class="meter" aria-hidden="true"><i id="meter-fill"></i></div>
+        <p id="meter-label">—</p>
+      </div>
+    </aside>
+
+    <main class="stage" id="stage">
+      <nav class="tabs" role="tablist" aria-label="工作区">
+        <button class="tab" role="tab" id="tab-detail" data-tab="detail" type="button"><b>1</b>单篇精读</button>
+        <button class="tab" role="tab" id="tab-map" data-tab="map" type="button"><b>2</b>主题图谱</button>
+        <button class="tab" role="tab" id="tab-matrix" data-tab="matrix" type="button"><b>3</b>对比矩阵</button>
+        <button class="tab" role="tab" id="tab-draft" data-tab="draft" type="button"><b>4</b>综述草稿</button>
+        <button class="tab" role="tab" id="tab-data" data-tab="data" type="button"><b>5</b>数据与体检</button>
+      </nav>
+
+      <section class="panel" id="panel-detail" role="tabpanel" aria-labelledby="tab-detail" tabindex="0">
+        <div class="panel-scroll" id="detail-body"></div>
+      </section>
+
+      <section class="panel" id="panel-map" role="tabpanel" aria-labelledby="tab-map" tabindex="0" hidden>
+        <div class="panel-head">
+          <div>
+            <h2>主题图谱</h2>
+            <p class="sub">对标题、关键词、摘要做中英混合分词与 TF-IDF 加权，再用 k-medoids 聚出主题簇。全部在浏览器本地计算，结果可复现。</p>
+          </div>
+          <div class="panel-tools">
+            <label class="field field-inline">
+              <span>簇数</span>
+              <input id="k-clusters" type="range" min="2" max="9" step="1" value="5">
+              <b id="k-out">5</b>
+            </label>
+            <button class="btn" id="btn-recluster" type="button">重新聚类</button>
+          </div>
+        </div>
+        <div class="panel-scroll" id="map-body"></div>
+      </section>
+
+      <section class="panel" id="panel-matrix" role="tabpanel" aria-labelledby="tab-matrix" tabindex="0" hidden>
+        <div class="panel-head">
+          <div>
+            <h2>精读对比矩阵</h2>
+            <p class="sub">行是当前筛选出来的文献，列是精读时要填的四件事。表格可直接编辑，改完自动保存。</p>
+          </div>
+          <div class="panel-tools">
+            <button class="btn" id="btn-export-csv" type="button">导出矩阵 CSV</button>
+          </div>
+        </div>
+        <div class="panel-scroll" id="matrix-body"></div>
+      </section>
+
+      <section class="panel" id="panel-draft" role="tabpanel" aria-labelledby="tab-draft" tabindex="0" hidden>
+        <div class="panel-head">
+          <div>
+            <h2>综述草稿</h2>
+            <p class="sub">把主题簇和矩阵里的精读记录拼成一篇带编号引用的综述骨架。它不会替你下结论，只负责把已有材料按学术语序排好、标好引用。</p>
+          </div>
+          <div class="panel-tools">
+            <button class="btn" id="btn-copy-draft" type="button">复制全文</button>
+            <button class="btn btn-primary" id="btn-download-draft" type="button">下载 .md</button>
+          </div>
+        </div>
+        <div class="draft-grid">
+          <form class="draft-controls" id="draft-controls" autocomplete="off"></form>
+          <div class="draft-out">
+            <div class="draft-bar">
+              <span id="draft-stat">—</span>
+              <span class="draft-hint">导出后可直接粘进 Typora / Obsidian / Overleaf（Markdown）</span>
+            </div>
+            <textarea id="draft-text" class="draft-text" spellcheck="false" aria-label="综述草稿 Markdown"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-data" role="tabpanel" aria-labelledby="tab-data" tabindex="0" hidden>
+        <div class="panel-head">
+          <div>
+            <h2>数据与体检</h2>
+            <p class="sub">导入你的真实文献、检查这个库读得够不够新、有没有重复，以及把整个库备份成一个 JSON 文件带走。</p>
+          </div>
+        </div>
+        <div class="panel-scroll" id="data-body"></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div class="dropzone" id="dropzone" hidden>松开即可导入 .bib / .ris / .csv / .json</div>
+
+<div class="modal" id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal-card">
+    <h2 id="modal-title">使用说明</h2>
+    <div id="modal-body"></div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" id="btn-modal-close" type="button">开始用</button>
+    </div>
+  </div>
+</div>
+
+<p class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></p>
+
+<script type="module" src="./js/app.js"></script>
+<noscript><p class="nojs">综述台的全部计算都在浏览器里完成，需要开启 JavaScript 才能使用。</p></noscript>
+</body>
+</html>

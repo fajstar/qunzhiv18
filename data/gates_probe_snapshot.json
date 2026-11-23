@@ -1,0 +1,117 @@
+{
+ "evidence": {
+  "ok": true,
+  "ts": 1795435562.3893018,
+  "at": "2026-11-23T20:06:02",
+  "latency_ms": 41541,
+  "response": {
+   "ok": true,
+   "pid": "ax_2510.19425",
+   "title": "Neural Variational Dropout Processes",
+   "field": "cs.LG",
+   "n": 3,
+   "max_items": 3,
+   "anchored": 3,
+   "items": [
+    {
+     "cls": "EXP",
+     "issue": "分类实验仅报告了准确率，缺少与回归/图像任务同等的消融分析（如去掉低秩Bernoulli专家或去掉变分先验在分类上的影响），也未说明分类任务是否做了多随机种子重复。",
+     "quote": "NVDPs achieve higher predictive accuracy than the model-based meta-learning approaches CNP",
+     "found": true,
+     "offset": 41966,
+     "html": "izes, learning rate, and epoch settings depicted in VERSA Gordon et al., 2018 Table 3 summarizes the results. <mark>NVDPs achieve higher predictive accuracy than the model-base</mark>d meta-learning approaches CNP and VERSA and is comparable with the state-of-the-art optimization-based meta-l",
+     "matched": "NVDPs achieve higher predictive accuracy than the model-base"
+    },
+    {
+     "cls": "EXP",
+     "issue": "1D回归与图像补全实验的表格只给出均值与标准差，但未说明标准差来自多少个随机种子或多少次独立运行，实验规模与重复性信息不足。",
+     "quote": "The validation result of the 1D regression models on the GP dataset in fixed variance and",
+     "found": true,
+     "offset": 32256,
+     "html": "8 0.46(\\pm 0.78) 0.66 0.92 0.66(\\pm 0.92) 0.68 0.75 0.68(\\pm 0.75) 0.81 0.62 \\mathbf{0.81(\\pm 0.62)} Table 1: <mark>The validation result of the 1D regression models on the GP </mark>dataset in fixed variance and learned variance settings. The higher LLs are the better. The models of NP, NP w",
+     "matched": "The validation result of the 1D regression models on the GP "
+    },
+    {
+     "cls": "EXP",
+     "issue": "缺少对关键超参数（如低秩分解的秩、dropout率范围、先验超参数）的敏感性分析或消融，无法判断性能对各设计选择的依赖程度。",
+     "quote": "A novel low-rank product of Bernoulli experts meta-model is utilized in the dropout poster",
+     "found": true,
+     "offset": 4336,
+     "html": "&amp; Ghahramani, 2016 Molchanov et al., 2017 Hron et al., 2018 Liu et al., 2019 in the context of meta-learning. <mark>A novel low-rank product of Bernoulli experts meta-model is </mark>utilized in the dropout posterior to learn task-specific dropout rates conditioned on a few learning examples.",
+     "matched": "A novel low-rank product of Bernoulli experts meta-model is "
+    }
+   ],
+   "cached": false,
+   "cached_at": "2026-11-23T20:06:02",
+   "elapsed_ms": 41540,
+   "engine_elapsed_ms": 41522,
+   "fulltext_chars": 75097,
+   "privacy": {
+    "scrubbed": true,
+    "layer": "private",
+    "policy": "quote/html/matched 返回前脱敏；不返回用户原文"
+   },
+   "call_id": "qz_20261121_77b64dc9792a053d",
+   "computed_at": "2026-11-23T12:06:02Z",
+   "version": "v2026-11-21",
+   "api_version": "v2026-11-21",
+   "schema_version": "2026-11-21",
+   "data_snapshot": "paperlib-4881fe5dee",
+   "call_id_kind": "content_addressed_result_id",
+   "call_id_semantics": "call_id 是“计算结果 ID”（内容寻址：接口 + 归一化参数 + API 版本 + 数据快照的哈希），不是调用凭据 / 鉴权 token；同参数重复调用会得到同一个 call_id，fetch_count 递增，is_cached=true 表示这是一次重复请求。",
+   "reproduce": {
+    "endpoint": "/api/evidence",
+    "params": {
+     "pid": "ax_2510.19425",
+     "max_items": 3
+    },
+    "rule": "同一 call_id + 同一 params + 同一 data_snapshot → 同一结果",
+    "replay": "/api/call/{call_id}",
+    "call_id_is_content_addressed": true
+   },
+   "is_cached": false,
+   "fetch_count": 1,
+   "first_computed_at": "2026-11-23T12:06:02Z",
+   "last_accessed_at": "2026-11-23T12:06:02Z",
+   "metric": "evidence_anchor_rate",
+   "scope": "pid:ax_2510.19425",
+   "denominator": {
+    "n": 3,
+    "description": "issues returned by v18 engine for this paper"
+   },
+   "numerator": {
+    "n": 3,
+    "description": "issues with an exact quote located in fulltext"
+   }
+  }
+ },
+ "updated_at": "2026-11-23T20:06:02",
+ "v6_last_run": {
+  "ts": 1795246202.202586,
+  "at": "2026-11-21T15:30:02",
+  "summary": {
+   "at": "2026-11-21T15:30:02",
+   "ts": 1795246202.2025816,
+   "topic": "LLM-as-a-Judge 置信度校准",
+   "scores_hidden": false,
+   "anchors_passed": true,
+   "anchors_scope": "model_capability_check",
+   "anchors_cached_at": "2026-11-21 14:43:34",
+   "models_used": [
+    "MiniMax-M2.5",
+    "glm-5.3-flash",
+    "qwen3.8-flash"
+   ],
+   "elapsed_s": 58.9,
+   "n_risk": 11,
+   "dimensions": {
+    "①": "强",
+    "②": "中",
+    "③": "中",
+    "④": "中",
+    "⑤": "中"
+   },
+   "errors": []
+  }
+ }
+}

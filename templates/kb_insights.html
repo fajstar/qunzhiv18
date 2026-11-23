@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>群智 · 论文库洞察</title>
+<link rel="stylesheet" href="/static/qz.css">
+<style>
+  .kpi { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+  .kpi .b { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:10px 14px; flex:1; min-width:120px; }
+  .kpi .v { font-size:20px; font-weight:800; color:var(--primary); }
+  .kpi .l { font-size:11px; color:var(--dim); margin-top:2px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--border); }
+  th { color:var(--dim); font-weight:600; font-size:12px; }
+  .bar { height:8px; border-radius:4px; background:var(--card2); overflow:hidden; }
+  .bar > i { display:block; height:100%; background:var(--primary); }
+  .pos { color:var(--danger); font-weight:700; }
+  .zero { color:var(--dim); }
+  .q { background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:8px 10px; font-size:12px; color:#4B5563; margin:6px 0; }
+</style>
+</head>
+<body>
+<div class="qz-top">
+  <div class="qz-title"><span class="qz-logo">群智</span> · 论文库洞察 <span class="qz-badge">25,128 篇</span></div>
+  <div><a class="qz-link" href="/kb">返回检索</a> · <a class="qz-link" href="/tools">能力平台</a></div>
+</div>
+
+<div class="qz-wrap">
+  <div class="qz-card">
+    <h3>📊 一句话结论</h3>
+    <div id="headline" class="qz-muted">加载中…</div>
+    <div class="kpi" id="kpi" style="margin-top:12px"></div>
+  </div>
+
+  <div class="qz-card">
+    <h3>哪类问题与「被拒」最相关（按篇统计）</h3>
+    <div class="qz-muted" style="margin-bottom:10px">
+      口径：某类问题在 <b>Reject 论文中的出现率</b> − <b>Accept 论文中的出现率</b>。
+      差越大，说明这类问题越"致命"；差≈0 说明这类问题<b>好论文也会被提</b>，不能当严重度信号。
+    </div>
+    <table>
+      <thead><tr><th>类</th><th>Accept 论文出现率</th><th>Reject 论文出现率</th><th>差</th><th style="width:22%">差异</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <div class="qz-card">
+    <h3>典型原句（人类评审真实写法）</h3>
+    <div id="quotes"></div>
+  </div>
+
+  <div class="qz-card">
+    <h3>对我们产品的含义</h3>
+    <div class="qz-muted" id="impl"></div>
+  </div>
+</div>
+
+<script src="/static/qz.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+qz.boot();
+const NAME = { EXP:"实验/证据", CMP:"对比", MTH:"方法/理论", STA:"统计报告", REP:"可复现",
+               PRS:"表述/呈现", NOV:"新颖性/贡献", OVC:"过度声称", ETH:"伦理", THE:"动机/解释", OTH:"其他" };
+
+(async () => {
+  try {
+    const j = await (await fetch("/api/kb/insights")).json();
+    const dc = j.decision_counts || {};
+    $("kpi").innerHTML = `
+      <div class="b"><div class="v">${(j.papers||0).toLocaleString()}</div><div class="l">论文</div></div>
+      <div class="b"><div class="v">${(j.issues||0).toLocaleString()}</div><div class="l">问题点</div></div>
+      <div class="b"><div class="v">${dc.Accept||0}</div><div class="l">Accept</div></div>
+      <div class="b"><div class="v">${dc.Reject||0}</div><div class="l">Reject</div></div>`;
+
+    const ranked = j.ranked || [];
+    const top = ranked[0];
+    if (top) {
+      $("headline").innerHTML = `与"被拒"最相关的问题是 <b>${NAME[top[0]]||top[0]}</b>：
+        Reject 论文里 <b>${top[1].reject_pct}%</b> 被提到，Accept 只有 <b>${top[1].accept_pct}%</b>（差 <b class="pos">+${top[1].diff_pt}pt</b>）。
+        而「实验/证据」类几乎出现在所有论文里（Accept ${j.classes.EXP.accept_pct}% vs Reject ${j.classes.EXP.reject_pct}%）——它是<b>通用噪声，不是区分信号</b>。`;
+    }
+    const maxAbs = Math.max(...ranked.map(x => Math.abs(x[1].diff_pt)), 1);
+    $("rows").innerHTML = ranked.map(([c, s]) => `
+      <tr>
+        <td><b>${c}</b> <span class="qz-muted">${NAME[c]||""}</span></td>
+        <td>${s.accept_pct}%</td>
+        <td>${s.reject_pct}%</td>
+        <td class="${Math.abs(s.diff_pt) >= 3 ? "pos" : "zero"}">${s.diff_pt > 0 ? "+" : ""}${s.diff_pt}pt</td>
+        <td><div class="bar"><i style="width:${Math.abs(s.diff_pt)/maxAbs*100}%"></i></div></td>
+      </tr>`).join("");
+
+    $("quotes").innerHTML = ranked.filter(([c, s]) => (s.quotes||[]).length && Math.abs(s.diff_pt) >= 3)
+      .slice(0, 4).map(([c, s]) => `
+        <div style="margin-bottom:12px">
+          <div style="font-weight:700;margin-bottom:4px">${c} ${NAME[c]||""}（${s.diff_pt>0?"+":""}${s.diff_pt}pt）</div>
+          ${(s.quotes||[]).slice(0,2).map(t => `<div class="q">${qz.esc(t).slice(0,260)}</div>`).join("")}
+        </div>`).join("") || '<div class="qz-muted">（无）</div>';
+
+    const w = j.weights_mined || null;
+    $("impl").innerHTML = `
+      · <b>「必改结论」的排序应该改</b>：现在按类别权重排，把 EXP 放最高；但这个库显示 EXP 在好/坏论文里几乎一样，
+        真正有区分力的是 <b>NOV / STA / CMP / MTH</b>。<br>
+      · <b>建议</b>：输出 16 条仍按覆盖优先（EXP 保留召回），但<b>「结论（必须改的 ≤3 条）」改为按区分力排序</b>，
+        即优先 NOV/STA/CMP。<br>
+      · <b>对作者的直接价值</b>：告诉他们"审稿人最可能因为什么拒你"，而不是"你缺了个 seed"。
+      ${w ? `<br>· 库校准权重（可试用于结论排序）：<code>${qz.esc(JSON.stringify(w))}</code>` : ""}`;
+  } catch (e) {
+    $("headline").textContent = "加载失败：" + e.message;
+  }
+})();
+</script>
+</body>
+</html>

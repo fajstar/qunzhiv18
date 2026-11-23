@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>群智 · 投稿前自检</title>
+<link rel="stylesheet" href="/static/qz.css">
+<style>
+  :root{--sc-paper:#FAF6F0;--sc-ink:#2A241F;--sc-dim:#8A7F72;--sc-line:#E4DACA;--sc-red:#C2402B;--sc-card:#FFFDF9;--sc-green:#3F7A4E}
+  body{background:var(--sc-paper);color:var(--sc-ink)}
+  .sc-num{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-variant-numeric:tabular-nums}
+  /* 工具条 */
+  .sc-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:var(--sc-card);border:1px solid var(--sc-line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+  .sc-bar input{flex:1;min-width:200px;padding:7px 10px;border:1px solid var(--sc-line);border-radius:8px;background:#fff;font-size:13px;color:var(--sc-ink)}
+  .sc-bar input#field{max-width:170px;flex:0 1 170px}
+  .sc-go{padding:7px 18px;border:0;border-radius:8px;background:var(--sc-red);color:#fff;font-size:13px;cursor:pointer}
+  .sc-go:hover{filter:brightness(1.08)}
+  .sc-note{font-size:12px;color:var(--sc-dim);margin:0 2px 16px}
+  /* 空状态 */
+  .sc-empty{border:1px dashed var(--sc-line);border-radius:12px;background:var(--sc-card);padding:28px 20px;text-align:center}
+  .sc-empty h4{margin:0 0 6px;font-size:15px;font-weight:600}
+  .sc-empty p{margin:0 0 12px;font-size:13px;color:var(--sc-dim)}
+  .sc-chip{display:inline-block;margin:0 6px;padding:5px 12px;border:1px solid var(--sc-line);border-radius:999px;background:#fff;font-size:12px;color:var(--sc-ink);cursor:pointer}
+  .sc-chip:hover{border-color:var(--sc-red);color:var(--sc-red)}
+  /* 检查头卡 */
+  .sc-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;background:var(--sc-card);border:1px solid var(--sc-line);border-radius:12px;padding:16px 18px;margin-bottom:14px}
+  .sc-title{font-size:16px;font-weight:600;margin-bottom:6px}
+  .sc-verdict{font-size:14px;margin-bottom:4px}
+  .sc-verdict.bad b{color:var(--sc-red)}
+  .sc-verdict.good b,.sc-verdict.good{color:var(--sc-green)}
+  .sc-meta{font-size:12px;color:var(--sc-dim)}
+  .sc-warn{margin:0 0 14px;padding:10px 12px;border-radius:9px;font-size:12.5px;line-height:1.75;
+    background:#FFF8E8;border:1px solid #EBD8B2;color:#7A5A12}
+  .sc-warn b{color:#9A6512}
+  .sc-warn .rec{display:block;margin-top:3px;color:#5C4A1E}
+  .sc-read{flex:none;font-size:13px;color:var(--sc-red);text-decoration:none;border:1px solid var(--sc-red);border-radius:8px;padding:6px 12px;white-space:nowrap}
+  .sc-read:hover{background:var(--sc-red);color:#fff}
+  /* 建议标签 */
+  .sc-sug{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:14px;font-size:12px;color:var(--sc-dim)}
+  .sc-sug-label{font-weight:600;color:var(--sc-ink);font-size:13px}
+  .sc-tag{padding:3px 10px;border:1px solid var(--sc-red);border-radius:999px;background:#fff;color:var(--sc-red);font-size:12px;cursor:pointer}
+  .sc-tag:hover{background:var(--sc-red);color:#fff}
+  /* 缺失 / 已具备 */
+  .sc-sec{font-size:13px;font-weight:600;margin:0 0 8px}
+  .sc-sec .sc-num{color:var(--sc-red)}
+  .sc-item{display:flex;align-items:center;gap:10px;background:var(--sc-card);border:1px solid var(--sc-line);border-left:3px solid var(--sc-red);border-radius:8px;padding:9px 12px;margin-bottom:6px}
+  .sc-dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--sc-red)}
+  .sc-name{flex:1;font-size:13px}
+  .sc-pct{flex:none;font-size:12px;color:var(--sc-dim)}
+  .sc-bar2{flex:none;width:90px;height:6px;border-radius:3px;background:var(--sc-line);overflow:hidden}
+  .sc-bar2>i{display:block;height:100%;background:var(--sc-red)}
+  .sc-clean{font-size:13px;color:var(--sc-green);background:var(--sc-card);border:1px solid var(--sc-line);border-radius:8px;padding:10px 12px}
+  .sc-ok{margin-top:14px;border:1px solid var(--sc-line);border-radius:8px;background:var(--sc-card)}
+  .sc-ok>summary{cursor:pointer;font-size:13px;padding:9px 12px;color:var(--sc-ink);list-style:none}
+  .sc-ok>summary::-webkit-details-marker{display:none}
+  .sc-ok>summary::before{content:"▸ ";color:var(--sc-dim)}
+  .sc-ok[open]>summary::before{content:"▾ "}
+  .sc-ok .sc-item{border:0;border-top:1px solid var(--sc-line);border-left:3px solid var(--sc-green);border-radius:0;margin:0;background:transparent}
+  .sc-ok .sc-dot{background:var(--sc-green)}
+  .sc-ok .sc-bar2>i{background:var(--sc-green)}
+  @keyframes scFlash{0%{box-shadow:0 0 0 3px rgba(194,64,43,.5)}100%{box-shadow:0 0 0 3px rgba(194,64,43,0)}}
+  .sc-flash{animation:scFlash 1.6s ease-out;background:#FBEAE5}
+</style>
+</head>
+<body>
+<div class="qz-top">
+  <div class="qz-title"><span class="qz-logo">群智</span> · 投稿前自检 <span class="qz-badge" id="ftBadge">库内 36.6 万篇全文</span> <span id="ftCall"></span></div>
+  <div><a class="qz-link" href="/kb">检索</a> · <a class="qz-link" href="/kb/portrait">领域画像</a></div>
+</div>
+<div class="qz-wrap">
+  <div class="sc-bar">
+    <input id="pid" type="text" placeholder="例如 ax_2611.08487（也可从 /kb 检索后复制）">
+    <input id="field" type="text" placeholder="领域（可空，如 cs.CL）">
+    <button class="sc-go" id="go">开始自检</button>
+  </div>
+  <p class="sc-note">说明：做法由全文规则匹配得到（消融/种子/CI/代码/超参/显著性/多次运行/局限性…），只作参考。</p>
+
+  <div class="sc-empty" id="empty">
+    <h4>输入论文 ID，看这篇论文缺什么</h4>
+    <p>自检会把本篇与同领域做法逐项对比。点击示例直接填入：</p>
+    <button class="sc-chip sc-num" data-pid="ax_2611.08487">ax_2611.08487</button>
+    <button class="sc-chip sc-num" data-pid="ax_2510.19425">ax_2510.19425</button>
+  </div>
+
+  <div id="resCard" hidden>
+    <div class="sc-head">
+      <div>
+        <div class="sc-title" id="resTitle"></div>
+        <div class="sc-verdict" id="resVerdict"></div>
+        <div class="sc-meta" id="resMeta"></div>
+      </div>
+      <a class="sc-read" id="evLink" href="#" target="_blank" rel="noopener">查看问题点 ↗</a>
+      <a class="sc-read" id="readLink" href="#" target="_blank" rel="noopener">读原文 ↗</a>
+    </div>
+    <div class="sc-warn" id="resWarn" hidden></div>
+
+    <div class="sc-sug" id="sugWrap" hidden>
+      <span class="sc-sug-label">建议补</span><span id="sugTags"></span>
+      <span>（这些做法在同领域里多数论文都做了，属于“该有”的项）</span>
+    </div>
+
+    <h4 class="sc-sec">缺失项 <span class="sc-num" id="missCount"></span></h4>
+    <div id="missList"></div>
+
+    <details class="sc-ok" id="okBox">
+      <summary>已具备 <span class="sc-num" id="okCount"></span> 项</summary>
+      <div id="okList"></div>
+    </details>
+  </div>
+</div>
+<script src="/static/qz.js">
+</script>
+<script>
+const $ = (id) => document.getElementById(id);
+qz.boot();
+const NAME = {seed:"报告随机种子",ci:"报告置信区间/误差条",ablation:"做消融实验",code:"公开代码",
+  hyperparameter:"报告超参",significance:"做显著性检验",multiple_runs:"多次运行取平均",
+  limitations:"讨论局限性",baseline_table:"基线对比表",dataset_stats:"数据集统计",
+  compute_budget:"算力开销",human_eval:"人工评测",cross_val:"交叉验证",released_data:"公开数据",ethics:"伦理讨论",
+  /* QBUG-013：补齐接口实际返回的另外 5 项，不再把内部英文标识符印到中文界面 */
+  claim_hedging:"对结论留有余地/不夸大",related_work_table:"相关工作对比表",
+  sota_compare:"与 SOTA 数值对比",novelty_statement:"明确新颖性陈述",
+  threat_validity:"讨论效度威胁"};
+
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const featEls = new Map();
+
+const nameOf = (feat) => esc(NAME[feat] || feat);
+const pctOf = (p) => (typeof p === "number" && isFinite(p))
+  ? `<span class="sc-pct"><span class="sc-num">${p}</span>% 同领域占比</span><span class="sc-bar2"><i style="width:${Math.min(100, Math.max(0, p))}%"></i></span>`
+  : "";
+const itemHtml = (r) => `<div class="sc-item" data-feat="${esc(r.feat)}"><span class="sc-dot"></span><span class="sc-name">${nameOf(r.feat)}</span>${pctOf(r.field_pct)}</div>`;
+
+function render(j, pid) {
+  const rows = j.rows || [];
+  const missing = rows.filter(r => !r.has);
+  const present = rows.filter(r => r.has);
+  $("empty").hidden = true;
+  $("resCard").hidden = false;
+  $("resTitle").textContent = j.title || pid;
+  $("resVerdict").className = "sc-verdict " + (missing.length ? "bad" : "good");
+  $("resVerdict").innerHTML = missing.length
+    ? `自检结论：<span class="sc-num">${rows.length}</span> 项检查中缺 <b class="sc-num">${missing.length}</b> 项`
+    : `自检结论：<span class="sc-num">${rows.length}</span> 项检查全部具备`;
+  $("resMeta").textContent = `${pid}｜${j.field || "领域未知"}｜${j.year || ""}｜${j.scope}｜已识别 ${j.n_features} 项做法` +
+    (j.reliable === false ? "｜⚠️ reliable=false" : "");
+  // QBUG-012：接口自述的 warning / recommended_scope / reliable / 字数口径不能丢
+  var warnBits = [];
+  if (j.warning) warnBits.push("<b>口径提示：</b>" + esc(j.warning));
+  var rec = j.recommended_scope || null;
+  if (rec && rec.scope && rec.scope !== j.scope) {
+    warnBits.push('<span class="rec">建议按「' + esc(rec.for || rec.scope) + '」口径重算（' +
+      esc(rec.scope) + (rec.reason ? "：" + esc(rec.reason) : "") + "）</span>");
+  }
+  if (j.has_fulltext === false) warnBits.push('<span class="rec">库内没有这篇的全文，本次判定只基于摘要/元数据。</span>');
+  if (j.n_chars != null && j.fulltext_chars != null && Number(j.n_chars) < Number(j.fulltext_chars)) {
+    warnBits.push('<span class="rec">本次只基于前 ' + Number(j.n_chars).toLocaleString() +
+      ' 个字符（全文 ' + Number(j.fulltext_chars).toLocaleString() + ' 字符），缺项可能在未读部分。</span>');
+  }
+  if (j.reliable === false) warnBits.push('<span class="rec">接口把本次结果标为可靠度不足（reliable=false），请勿直接引用。</span>');
+  var wbox = $("resWarn");
+  wbox.hidden = !warnBits.length;
+  wbox.innerHTML = warnBits.join("");
+  $("readLink").href = "/read?pid=" + encodeURIComponent(pid) + "&line=1";
+  var ev = $("evLink");
+  if (ev) ev.href = "/evidence?pid=" + encodeURIComponent(pid) + "&line=1&auto=1";
+  $("missCount").textContent = missing.length ? `（${missing.length}）` : "";
+  $("missList").innerHTML = missing.length
+    ? missing.map(itemHtml).join("")
+    : `<div class="sc-clean">清单内做法本篇均已具备</div>`;
+  $("okCount").textContent = present.length;
+  $("okList").innerHTML = present.map(itemHtml).join("");
+  $("okBox").open = false;
+  const sugs = j.suggestions || [];
+  $("sugWrap").hidden = !sugs.length;
+  $("sugTags").innerHTML = sugs.map(k => `<button class="sc-tag" data-sug="${esc(k)}">${nameOf(k)}</button>`).join(" ");
+  featEls.clear();
+  $("resCard").querySelectorAll("[data-feat]").forEach(el => featEls.set(el.dataset.feat, el));
+  // 把 pid 写回 URL，刷新/收藏/「继续上次」都不丢
+  try { history.replaceState(null, "", "/kb/selfcheck?pid=" + encodeURIComponent(pid)); } catch (e) {}
+  if (window.QZNav) { window.QZNav.refresh(); window.QZNav.setTitle(j.title || pid); }
+}
+
+$("go").onclick = async () => {
+  const pid = $("pid").value.trim();
+  if (!pid) { alert("请输入论文 ID"); return; }
+  const q = new URLSearchParams({pid});
+  if ($("field").value.trim()) q.set("field", $("field").value.trim());
+  try {
+    const j = await (await fetch("/api/kb/selfcheck?" + q, {
+      headers: { "X-Access-Key": "__QZ_DEMO_KEY__" } })).json();
+    if (!j.ok) throw new Error(j.detail || "失败");
+    render(j, pid);
+  } catch (e) {
+    alert("自检失败：" + e.message);
+  }
+};
+
+$("empty").addEventListener("click", (ev) => {
+  const chip = ev.target.closest("[data-pid]");
+  if (!chip) return;
+  $("pid").value = chip.dataset.pid;
+  if (window.QZNav) window.QZNav.refresh();
+  $("go").click();
+});
+
+$("sugTags").addEventListener("click", (ev) => {
+  const tag = ev.target.closest("[data-sug]");
+  if (!tag) return;
+  const el = featEls.get(tag.dataset.sug);
+  if (!el) return;
+  const d = el.closest("details");
+  if (d) d.open = true;
+  el.scrollIntoView({behavior: "smooth", block: "center"});
+  el.classList.remove("sc-flash");
+  void el.offsetWidth;
+  el.classList.add("sc-flash");
+});
+
+// 链接参数带入论文 ID（不自动查询，避免静默失败）
+window.addEventListener("load", function () {
+  var pid = new URLSearchParams(location.search).get("pid");
+  if (!pid) return;
+  var inp = document.getElementById("pid");
+  var go = document.getElementById("go");
+  if (inp) inp.value = pid;
+  if (go) {
+    go.style.boxShadow = "0 0 0 3px rgba(194,64,43,.25)";
+    go.textContent = "点我开始自检";
+  }
+  if (window.QZNav) window.QZNav.refresh();
+});
+</script>
+<script>
+// 2026-11-22 BUG-003：全库规模统一从 /api/kb/stats 读（有全文≠有特征）。
+fetch("/api/kb/stats", {cache:"no-store"}).then(r=>r.json()).then(j=>{
+  if (!j || !j.ok) return;
+  var b = document.getElementById("ftBadge");
+  if (b) { b.textContent = "库内 " + qz.wan(j.fulltext) + "篇全文"; b.title = "fulltext = " + qz.num(j.fulltext) + "（pid 去重）"; }
+  var c = document.getElementById("ftCall");
+  if (c) c.innerHTML = qz.callBadge(j, "库统计");
+}).catch(()=>{});
+</script>
+<script src="/static/qz-nav.js"></script>
+</body>
+</html>

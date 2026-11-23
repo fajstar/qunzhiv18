@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>任务历史 · 群智</title>
+<link rel="stylesheet" href="/static/wb.css">
+</head>
+<body>
+<div class="page" style="max-width:980px;margin:0 auto">
+  <div class="page-head">
+    <h1>任务历史</h1>
+    <div class="lead">最近的论文包任务与 Agent 运行，点进去看当时的报告（不丢）。</div>
+  </div>
+  <div class="card">
+    <table class="t">
+      <thead><tr><th>类型</th><th>ID / 包名</th><th>文件数</th><th>时间</th><th>操作</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="5" class="empty">加载中…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+(async () => {
+  try{
+    const j = await (await fetch("/api/runs?limit=30", {cache:"no-store"})).json();
+    const runs = j.runs || [];
+    $("#rows").innerHTML = runs.length ? runs.map(r=>`
+      <tr>
+        <td>${r.kind === "pkg" ? "论文包" : "Agent"}</td>
+        <td><code>${esc(r.job || r.run)}</code>${r.zip ? "<br><span class='hint'>"+esc(r.zip)+"</span>" : ""}</td>
+        <td>${r.files ?? "—"}</td>
+        <td>${esc(r.created_at || r.at || "")}</td>
+        <td>${r.url ? `<a href="${r.url}" target="_blank">查看报告 ↗</a>` : "—"}</td>
+      </tr>`).join("") : '<tr><td colspan="5" class="empty">暂无记录</td></tr>';
+  }catch(e){ $("#rows").innerHTML = `<tr><td colspan="5" class="empty">失败：${esc(e.message)}</td></tr>`; }
+})();
+</script>
+<script src="/static/qz-nav.js"></script>
+</body>
+</html>

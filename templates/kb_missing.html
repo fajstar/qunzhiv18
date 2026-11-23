@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>群智 · 漏引检测</title>
+<link rel="stylesheet" href="/static/qz.css">
+<style>
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  .row input{flex:1;min-width:220px}
+  .cand{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px}
+  .cand .t{font-size:13px;line-height:1.6}
+  .cand .m{font-size:11.5px;color:var(--dim);margin-top:4px}
+  .badge{display:inline-block;background:#DBEAFE;color:#2563EB;border-radius:10px;padding:1px 8px;font-size:11px;font-weight:700;margin-right:6px}
+</style>
+</head>
+<body>
+<div class="qz-top">
+  <div class="qz-title"><span class="qz-logo">群智</span> · 漏引检测 <span class="qz-badge">S2 引用网络</span></div>
+  <div><a class="qz-link" href="/kb">检索</a> · <a class="qz-link" href="/kb/selfcheck">自检</a></div>
+</div>
+<div class="qz-wrap">
+  <div class="qz-card">
+    <h3>🔗 这篇论文可能漏引了谁</h3>
+    <div class="row">
+      <input id="pid" type="text" placeholder="论文 ID，如 ax_2510.19425">
+      <select id="top"><option>10</option><option>20</option></select>
+      <button class="qz-btn" id="go">检测</button>
+    </div>
+    <div class="qz-muted">方法：找同领域、标题相近、且有参考文献的论文（兄弟），统计它们都引了、而目标没引的文献。</div>
+  </div>
+  <div class="qz-card" id="card" style="display:none">
+    <h3 id="title"></h3>
+    <div class="qz-muted" id="meta" style="margin-bottom:10px"></div>
+    <div id="list"></div>
+  </div>
+</div>
+<script src="/static/qz.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+qz.boot();
+$("go").onclick = async () => {
+  const pid = $("pid").value.trim();
+  if (!pid) { alert("请输入论文 ID"); return; }
+  $("list").innerHTML = '<div class="qz-muted">检测中…</div>';
+  try {
+    const j = await (await fetch(`/api/kb/missing_cites?pid=${encodeURIComponent(pid)}&top=${$("top").value}&key=__QZ_DEMO_KEY__`)).json();
+    if (!j.ok) throw new Error(j.detail || "失败");
+    $("card").style.display = "block";
+    $("title").textContent = j.title || pid;
+    $("meta").textContent = `参考文献 ${j.n_refs} 条｜兄弟论文 ${j.siblings} 篇｜阈值 ${j.threshold} 篇`;
+    if (!j.siblings) {
+      $("list").innerHTML = `<div class="qz-muted">${j.reason || "暂时没有可比较的兄弟论文（等 S2 参考文献补齐后再试）"}</div>`;
+      return;
+    }
+    if (!j.candidates.length) { $("list").innerHTML = '<div class="qz-muted">没有发现明显漏引</div>'; return; }
+    $("list").innerHTML = j.candidates.map(c => `
+      <div class="cand">
+        <div class="t"><span class="badge">${c.cited_by}/${j.siblings}</span>${qz.esc(c.ref_title || "")}</div>
+        <div class="m">被 ${c.ratio}% 的兄弟论文引用</div>
+      </div>`).join("");
+  } catch (e) { $("list").innerHTML = `<div class="qz-muted">检测失败：${e.message}</div>`; }
+};
+// 从 URL 带入论文：?pid=xxx&auto=1 直接检测（线 3 的上一步/下一步带过来）
+(function () {
+  const q = new URLSearchParams(location.search);
+  const pid = q.get("pid");
+  if (!pid) return;
+  document.getElementById("pid").value = pid;
+  if (q.get("auto")) document.getElementById("go").click();
+})();
+</script>
+<script src="/static/qz-nav.js"></script>
+</body>
+</html>

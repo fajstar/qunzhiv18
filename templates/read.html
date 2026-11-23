@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>读原文 · 群智</title>
+<style>
+  :root{--ink:#15181D;--ink2:#4A5158;--dim:#8A9099;--line:#E6E1D8;--paper:#FAF6F0;--accent:#C2402B}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+       font:16px/1.85 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",serif}
+  .top{position:sticky;top:0;background:#FAF6F0F2;backdrop-filter:blur(8px);border-bottom:1px solid var(--line);z-index:5}
+  .top-in{max-width:820px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;transition:max-width .18s ease}
+  .top-in.wide{max-width:1280px}
+  .back{color:var(--accent);text-decoration:none;font-size:13px}
+  .t{font-size:13px;color:var(--dim);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:120px}
+  .tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .tools button,.tools a{border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;font-size:12.5px;cursor:pointer;color:var(--ink2);text-decoration:none;font-family:inherit}
+  .tools button:hover:not(:disabled),.tools a:hover{border-color:var(--accent);color:var(--accent)}
+  .tools button:disabled{opacity:.42;cursor:not-allowed}
+  .modes{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
+  .modes button{border:0;border-radius:0;padding:5px 11px;background:transparent}
+  .modes button + button{border-left:1px solid var(--line)}
+  .modes button.on{background:var(--accent);color:#fff}
+  .modes button.on:hover{color:#fff}
+  .wrap{max-width:820px;margin:0 auto;padding:26px 20px 80px;transition:max-width .18s ease}
+  .wrap.wide{max-width:1280px;padding:16px 20px 32px}
+  h1{font-size:27px;line-height:1.4;margin:0 0 12px;letter-spacing:-.005em}
+  .meta{font-size:12.5px;color:var(--dim);margin-bottom:22px;display:flex;gap:10px;flex-wrap:wrap}
+  .pill{border:1px solid var(--line);border-radius:999px;padding:2px 9px;background:#fff}
+  .abstract{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:26px;font-size:14.5px;line-height:1.8;color:var(--ink2)}
+  .abstract b{display:block;font-size:12px;color:var(--dim);letter-spacing:.1em;margin-bottom:8px}
+  .body{font-size:16.5px;line-height:1.85;white-space:pre-wrap;word-break:break-word;max-width:720px;margin:0 auto}
+  .body p{margin:0 0 1.15em;white-space:pre-wrap;overflow-wrap:anywhere}
+  .body h2{font-size:1.2em;line-height:1.45;margin:1.9em 0 .65em;font-weight:700;letter-spacing:-.01em}
+  .body h3{font-size:1.05em;line-height:1.5;margin:1.5em 0 .5em;font-weight:700}
+  .body .tbl{font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--ink2);background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:1.2em 0;overflow-x:auto}
+  .empty{padding:40px 20px;text-align:center;color:var(--dim);font-size:14px;line-height:1.9}
+  .empty a{color:var(--accent)}
+  .more{margin:26px 0;text-align:center}
+  .more button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 22px;font-size:13.5px;cursor:pointer;color:var(--ink2)}
+  .more button:hover{border-color:var(--accent);color:var(--accent)}
+  .foot{margin-top:40px;padding-top:16px;border-top:1px solid var(--line);font-size:12px;color:var(--dim)}
+  .warn{background:#FDF5F3;border:1px solid #F0D3CC;border-radius:10px;padding:14px 16px;font-size:13.5px;color:#8C2E1E;line-height:1.8;margin-bottom:22px}
+  .warn a{color:var(--accent)}
+  .tip{background:#FFFDF8;border:1px solid var(--line);border-radius:10px;padding:11px 14px;font-size:13px;color:var(--dim);line-height:1.7;margin-bottom:18px}
+  .wide .warn,.wide .tip{margin-bottom:14px}
+  .html-note{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--dim);margin:0 2px 10px}
+  .html-note a{color:var(--accent);text-decoration:none}
+  .html-note a:hover{text-decoration:underline}
+  #arxFrame{display:block;width:100%;height:calc(100vh - 180px);min-height:calc(100vh - 200px);border:0;border-radius:10px;background:#fff;box-shadow:0 1px 2px #0000000D}
+  @media(max-width:640px){
+    h1{font-size:22px}.wrap{padding:18px 16px 60px}.body{font-size:15.5px;line-height:1.9}
+    .wrap.wide{padding:10px 10px 24px}#arxFrame{height:calc(100vh - 150px);min-height:calc(100vh - 170px)}
+    .t{order:3;flex-basis:100%;min-width:0}
+  }
+  .call-badge{display:inline-flex;align-items:center;gap:4px;font-family:ui-monospace,Consolas,monospace;
+    font-size:10px;line-height:1.5;padding:1px 6px;border-radius:999px;text-decoration:none;color:var(--dim);
+    background:#fff;border:1px dashed var(--line);white-space:nowrap;margin-left:6px}
+  .call-badge:hover{color:var(--accent);border-color:var(--accent)}
+  /* QBUG-001：/api/evidence 锚点高亮 */
+  .evbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--ink2);
+    background:#FFFDF8;border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:0 0 18px;line-height:1.6}
+  .evbar.bad{background:#FDF5F3;border-color:#F0D3CC;color:#8C2E1E}
+  .evbar .spin{width:11px;height:11px;border-width:2px}
+  .evbar b{color:var(--accent)}
+  .body mark.ev-mark{background:#FFE08A;color:#5A3E00;padding:1px 2px;border-radius:3px;
+    box-shadow:0 0 0 1px #E3CB7C inset;scroll-margin:120px 0 140px}
+  .body mark.ev-mark.ev-focus{background:#FFC94D;box-shadow:0 0 0 3px #C2402B44}
+  @media(max-width:640px){.evbar{font-size:12px;padding:7px 10px}}
+</style>
+</head>
+<body>
+<div class="top"><div class="top-in" id="topIn">
+  <a class="back" href="#" id="back">← 返回</a>
+  <span class="t" id="crumb">加载中…</span>
+  <div class="tools">
+    <span class="modes" id="modes" style="display:none">
+      <button id="modeHtml" title="arXiv HTML 版：完整排版（章节/公式/图/引用）">HTML 版</button>
+      <button id="modeText" title="库内重排文本：图/公式不可见">纯文本</button>
+    </span>
+    <button id="fs-down" title="字号变小">A－</button>
+    <button id="fs-up" title="字号变大">A＋</button>
+    <a id="ev" href="#" style="display:none">查看问题点</a>
+    <a id="src" href="#" target="_blank" rel="noopener" style="display:none">arXiv 原文 ↗</a>
+  </div>
+</div></div>
+
+<div class="wrap" id="wrap">
+  <div id="notice"></div>
+  <div id="evBar" class="evbar" hidden></div>
+
+  <div id="textView">
+    <h1 id="title">加载中…</h1>
+    <div class="meta" id="meta"></div>
+    <div class="abstract" id="abs" style="display:none"><b>摘要</b><span id="absText"></span></div>
+    <div class="body" id="body"></div>
+    <div class="more" id="more" style="display:none"><button id="loadMore">继续读（还有更多）</button></div>
+    <div class="foot">群智 · 全文来自论文库（<span id="ftPapers">59.5 万</span>篇，其中 <span id="ftFull">36.6 万</span>篇有全文）<span id="ftCall"></span></div>
+  </div>
+
+  <div id="htmlView" style="display:none">
+    <div class="html-note">
+      <span id="htmlNote">arXiv HTML 版 · 完整排版（章节 / 公式 / 图 / 引用）</span>
+      <a id="htmlOpen" href="#" target="_blank" rel="noopener">在 arXiv 打开 ↗</a>
+    </div>
+    <iframe id="arxFrame" title="arXiv HTML 版全文" src="about:blank"
+            sandbox="allow-scripts allow-popups"
+            referrerpolicy="no-referrer" loading="eager"></iframe>
+  </div>
+</div>
+
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var pid = q.get('pid') || '';
+  var offset = 0, total = 0, loading = false;
+  var paper = null, arxivId = '', mode = 'text';
+  var paperNotice = '', htmlNotice = '';
+  var htmlToken = 0, htmlTimer = null;
+  var el = function (id) { return document.getElementById(id); };
+
+  /* ---------- QBUG-001：证据锚点 ----------
+     line = 证据条目序号（1 起）；biz = 业务线序号（1-5，供 qz-nav 面包屑）。
+     两者分开：旧链接里的 line=3 原本是“文献工作（第 3 条业务线）”，
+     现在 line 只用于定位问题条目；面包屑改读 biz 或 referrer。 */
+  var docText = '';                 // 已加载正文（从绝对偏移 0 开始连续）
+  var evItems = [], evMarks = [];
+  var evState = 'idle';             // idle | loading | ready | error
+  var wantLine = parseInt(q.get('line') || '0', 10) || 0;
+  var bizLine = parseInt(q.get('biz') || '0', 10) || 0;
+  function inferBiz() {
+    if (bizLine >= 1 && bizLine <= 5) return bizLine;
+    var ref = document.referrer || '';
+    if (/\/evidence/.test(ref) || /\/kb\/selfcheck/.test(ref)) return 1;
+    if (/\/kb(\/|$|\?)/.test(ref)) return 3;
+    return 1;
+  }
+  var biz = inferBiz();
+
+  var back = document.referrer && /qunzhi/.test(document.referrer) ? -1 : null;
+  el('back').onclick = function (e) {
+    if (back === -1) { e.preventDefault(); history.back(); } else { e.preventDefault(); location.href = '/kb'; }
+  };
+
+  var fs = 16;
+  el('fs-up').onclick = function () { fs = Math.min(22, fs + 1); el('body').style.fontSize = fs + 'px'; el('absText').style.fontSize = (fs - 1.5) + 'px'; };
+  el('fs-down').onclick = function () { fs = Math.max(13, fs - 1); el('body').style.fontSize = fs + 'px'; el('absText').style.fontSize = (fs - 1.5) + 'px'; };
+
+  function escHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function renderNotice() {
+    // 兜底提示优先；库内无全文的提示只在纯文本模式下有意义
+    el('notice').innerHTML = (htmlNotice || '') + (mode === 'text' ? (paperNotice || '') : '');
+  }
+
+  function setModeButtons(m) {
+    var bh = el('modeHtml'), bt = el('modeText');
+    if (!bh || !bt) return;
+    if (m === 'html') { bh.className = 'on'; bt.className = ''; }
+    else { bh.className = ''; bt.className = 'on'; }
+    el('fs-up').disabled = (m === 'html');
+    el('fs-down').disabled = (m === 'html');
+  }
+
+  function stopHtmlTimer() {
+    if (htmlTimer) { clearTimeout(htmlTimer); htmlTimer = null; }
+  }
+
+  function syncModeUrl(m) {
+    try {
+      if (!window.history || !history.replaceState) return;
+      var u = new URL(location.href);
+      u.searchParams.set('mode', m);
+      history.replaceState(null, '', u.toString());
+    } catch (e) { /* 旧浏览器忽略 */ }
+  }
+
+  function showTextViewOnly() {
+    mode = 'text';
+    el('htmlView').style.display = 'none';
+    el('textView').style.display = '';
+    el('wrap').className = 'wrap';
+    el('topIn').className = 'top-in';
+    setModeButtons('text');
+    renderNotice();
+  }
+
+  function showText() {
+    htmlToken++;
+    stopHtmlTimer();
+    var f = el('arxFrame');
+    f.onload = f.onerror = null;
+    f.src = 'about:blank';
+    htmlNotice = '';
+    showTextViewOnly();
+    syncModeUrl('text');
+  }
+
+  function fallback(reason) {
+    htmlToken++;
+    stopHtmlTimer();
+    try { el('arxFrame').src = 'about:blank'; } catch (e) {}
+    htmlNotice = '<div class="warn">HTML 版没能加载出来（可能这篇没有 HTML 版，或网络较慢），已切换纯文本。' +
+      (reason ? '<span style="color:#8A9099">（' + escHtml(reason) + '）</span>' : '') + '</div>';
+    showTextViewOnly();
+    syncModeUrl('text');
+  }
+
+  function showHtml(proxyUrl, openUrl, token) {
+    if (token !== htmlToken) return;
+    mode = 'html';
+    stopHtmlTimer();
+    htmlNotice = '';
+    renderNotice();
+    el('textView').style.display = 'none';
+    el('htmlView').style.display = '';
+    el('wrap').className = 'wrap wide';
+    el('topIn').className = 'top-in wide';
+    setModeButtons('html');
+    el('htmlOpen').href = openUrl || proxyUrl;
+    // 734KB 的 arXiv 页面从拿到到首屏绘制还要 1-3 秒（外链 CSS/图），
+    // 期间在顶栏给个「正在渲染」，避免一片空白（加载完成会 postMessage）。
+    var hn = el('htmlNote');
+    if (hn) hn.textContent = '正在渲染 arXiv HTML 版…';
+    var f = el('arxFrame');
+    // 不用 iframe.onload：初始 about:blank 的 load 事件会把"已加载"提前置真。
+    // 代理页注入脚本成功后 postMessage(__arxProxyLoaded)，失败页发 __arxProxyError。
+    f.onload = null;
+    f.onerror = function () { if (token === htmlToken && mode === 'html') fallback('iframe 加载失败'); };
+    f.src = proxyUrl;
+    // 直连 arxiv.org（绕过 45 秒的代理链路）；真实浏览器 5-15 秒可加载，
+    // 失败时自动切纯文本（fallback 已有）。
+    htmlTimer = setTimeout(function () {
+      if (mode === 'html' && token === htmlToken) fallback('加载超时');
+    }, 60000);
+    syncModeUrl('html');
+  }
+
+  window.addEventListener('message', function (ev) {
+    var d = ev.data;
+    if (!d) return;
+    var f = el('arxFrame');
+    // 只认当前 iframe 的消息，防止其它窗口/旧页面误触发
+    if (f && ev.source !== f.contentWindow) return;
+    if (d.__arxProxyLoaded && mode === 'html') {
+      stopHtmlTimer();
+      var hn = el('htmlNote');
+      if (hn) hn.textContent = 'arXiv HTML 版 · 完整排版（章节 / 公式 / 图 / 引用）';
+      return;
+    }
+    if (d.__arxProxyError && mode === 'html') fallback(d.message || '代理加载失败');
+  });
+
+  function probeAndShowHtml(aid) {
+    var token = ++htmlToken;
+    // 不直接嵌 arxiv.org（会被反爬成空白），成功后走同源后端代理（已预热 → 秒开）
+    var proxyUrl = '/api/arxiv/html/' + encodeURIComponent(aid);
+    var openUrl = 'https://arxiv.org/html/' + encodeURIComponent(aid);
+    htmlNotice = '<div class="tip">正在准备 arXiv HTML 版（约 30-45 秒）… ' +
+      '<span id="warmElapsed">0</span> 秒</div>';
+    showTextViewOnly();
+
+    // 1. 先查状态：已缓存（10 分钟）直接秒开
+    fetch('/api/arxiv/html/status/' + encodeURIComponent(aid), { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (j) {
+        if (token !== htmlToken) return;          // 用户已切走
+        if (j && j.status === 'ready') { showHtml(proxyUrl, openUrl, token); return; }
+        if (j && j.status === 'failed') { fallback('预热失败：' + (j.reason || '')); return; }
+
+        // 2. 触发后台预抓（立即返回，不阻塞）
+        fetch('/api/arxiv/html/warm/' + encodeURIComponent(aid),
+              { method: 'POST', cache: 'no-store' }).catch(function () {});
+
+        // 3. 轮询状态；60 秒还没好 → 自动切纯文本，不卡死
+        var t0 = Date.now();
+        var timer = setInterval(function () {
+          if (token !== htmlToken) { clearInterval(timer); return; }
+          var sec = document.getElementById('warmElapsed');
+          if (sec) sec.textContent = Math.round((Date.now() - t0) / 1000);
+          if (Date.now() - t0 >= 60000) { clearInterval(timer); fallback('准备超时（60 秒）'); return; }
+          fetch('/api/arxiv/html/status/' + encodeURIComponent(aid), { cache: 'no-store' })
+            .then(function (r) { return r.json(); })
+            .then(function (s) {
+              if (token !== htmlToken) { clearInterval(timer); return; }
+              if (s && s.status === 'ready') {
+                clearInterval(timer);
+                showHtml(proxyUrl, openUrl, token);
+              } else if (s && s.status === 'failed') {
+                clearInterval(timer);
+                fallback('预热失败：' + (s.reason || ''));
+              }
+            })
+            .catch(function () { /* 单次轮询失败不致命，下一轮再试 */ });
+        }, 2000);
+      })
+      .catch(function (e) {
+        if (token !== htmlToken) return;
+        fallback('探测失败：' + e.message);
+      });
+  }
+
+  el('modeHtml').onclick = function () {
+    if (!arxivId || mode === 'html') return;
+    probeAndShowHtml(arxivId);
+  };
+  el('modeText').onclick = function () {
+    if (mode === 'text') return;
+    showText();
+  };
+
+  /* ---------- QBUG-001：把 /api/evidence 的锚点变成正文里的 <mark> ---------- */
+  function escapeRe(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+  // 在（服务端已重排的）正文里找接口给的 matched/quote。
+  // 不直接用 offset：offset 是在原始全文上算的，PDF 重排后字符下标会漂移。
+  function findQuote(hay, needle) {
+    needle = String(needle || '').replace(/\s+/g, ' ').trim();
+    if (needle.length < 12) return null;
+    var probes = [needle.slice(0, 50), needle.slice(0, 32), needle.slice(0, 20)];
+    for (var p = 0; p < probes.length; p++) {
+      var probe = probes[p].replace(/^[\s"'“”‘’]+|[\s"'“”‘’]+$/g, '');
+      if (probe.length < 8) continue;
+      var parts = probe.split(/\s+/).filter(Boolean);
+      if (parts.length > 1) {
+        try {
+          var m = new RegExp(parts.map(escapeRe).join('\\s+')).exec(hay);
+          if (m) return { start: m.index, len: m[0].length };
+        } catch (e) { /* 忽略单个坏正则 */ }
+      }
+      var i = hay.indexOf(probe);
+      if (i >= 0) return { start: i, len: probe.length };
+    }
+    return null;
+  }
+
+  function buildMarks() {
+    evMarks = [];
+    for (var i = 0; i < evItems.length; i++) {
+      var it = evItems[i] || {};
+      var loc = findQuote(docText, it.matched) || findQuote(docText, it.quote);
+      if (!loc && it.offset != null && it.offset >= 0 && it.offset < docText.length) {
+        // 字串没对上时，退回接口 offset（可能因重排有少量偏差）
+        var n = Math.max(24, Math.min(120, String(it.matched || it.quote || '').length || 60));
+        loc = { start: it.offset, len: Math.min(n, docText.length - it.offset) };
+      }
+      if (loc && loc.len > 0) {
+        evMarks.push({ idx: i + 1, start: loc.start, end: loc.start + loc.len });
+      }
+    }
+    // 去掉互相重叠的 mark，避免嵌套 <mark>
+    evMarks.sort(function (a, b) { return a.start - b.start; });
+    var clean = [], lastEnd = -1;
+    for (var k = 0; k < evMarks.length; k++) {
+      if (evMarks[k].start >= lastEnd) { clean.push(evMarks[k]); lastEnd = evMarks[k].end; }
+    }
+    evMarks = clean;
+  }
+
+  function markedBlock(b, absStart) {
+    var hits = [];
+    for (var i = 0; i < evMarks.length; i++) {
+      var m = evMarks[i];
+      var s = Math.max(m.start, absStart);
+      var e = Math.min(m.end, absStart + b.length);
+      if (e > s) hits.push({ s: s - absStart, e: e - absStart, idx: m.idx });
+    }
+    if (!hits.length) return escHtml(b);
+    hits.sort(function (a, b2) { return a.s - b2.s; });
+    var out = '', cur = 0;
+    for (var j = 0; j < hits.length; j++) {
+      var h = hits[j];
+      if (h.s < cur) continue;
+      out += escHtml(b.slice(cur, h.s));
+      out += '<mark class="ev-mark" id="evm-' + h.idx + '" data-item="' + h.idx + '">' +
+             escHtml(b.slice(h.s, h.e)) + '</mark>';
+      cur = h.e;
+    }
+    out += escHtml(b.slice(cur));
+    return out;
+  }
+
+  // 后端已按 \n\n 分段、## / ### 标标题；这里只负责安全地渲染成论文版式。
+  // baseOffset 是该段在 docText 里的绝对起点，用来把 evidence 的 mark 放进正确段落。
+  function renderBlocks(t, baseOffset) {
+    var out = [], re = /\n{2,}/g, last = 0, m;
+    function pushBlock(b, absStart) {
+      var lead = 0, trail = 0;
+      while (lead < b.length && b.charAt(lead) === '\n') lead++;
+      while (trail < b.length - lead && b.charAt(b.length - 1 - trail) === '\n') trail++;
+      b = b.slice(lead, b.length - trail);
+      absStart += lead;
+      if (!b) return;
+      if (b.slice(0, 4) === '### ') {
+        out.push('<h3>' + escHtml(b.slice(4).trim()) + '</h3>');
+      } else if (b.slice(0, 3) === '## ') {
+        out.push('<h2>' + escHtml(b.slice(3).trim()) + '</h2>');
+      } else {
+        var cls = b.indexOf('\n') >= 0 ? ' class="tbl"' : '';
+        out.push('<p' + cls + '>' + markedBlock(b, absStart) + '</p>');
+      }
+    }
+    var s = String(t || '');
+    while ((m = re.exec(s)) !== null) {
+      pushBlock(s.slice(last, m.index), baseOffset + last);
+      last = m.index + m[0].length;
+    }
+    pushBlock(s.slice(last), baseOffset + last);
+    return out.join('');
+  }
+
+  function paintBody() {
+    el('body').innerHTML = renderBlocks(docText, 0);
+  }
+
+  function setEvBar(html, bad) {
+    var b = el('evBar');
+    if (!b) return;
+    b.hidden = false;
+    b.className = 'evbar' + (bad ? ' bad' : '');
+    b.innerHTML = html;
+  }
+
+  function scrollToLine(n) {
+    if (!evMarks.length) return;
+    var hit = null, next = null, last = null;
+    for (var i = 0; i < evMarks.length; i++) {
+      var mm = evMarks[i];
+      last = mm;
+      if (mm.idx === n) { hit = mm; break; }
+      if (!next && mm.idx > n) next = mm;
+    }
+    hit = hit || next || last;
+    var node = document.getElementById('evm-' + hit.idx);
+    if (!node) return;
+    node.classList.add('ev-focus');
+    try { node.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+    catch (e) { node.scrollIntoView(); }
+    setTimeout(function () { node.classList.remove('ev-focus'); }, 2600);
+  }
+
+  function loadEvidence() {
+    if (!pid || evState !== 'idle') return;
+    evState = 'loading';
+    setEvBar('<span class="spin"></span> 正在按 <b>/api/evidence</b> 定位原文（首次约 30–60 秒；已缓存则秒开）…', false);
+    fetch('/api/evidence', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Access-Key': '__QZ_DEMO_KEY__' },
+      body: JSON.stringify({ pid: pid, max_items: 8 })
+    }).then(function (r) {
+      return r.json().then(function (j) { return { r: r, j: j }; });
+    }).then(function (x) {
+      var j = x.j || {};
+      if (!x.r.ok) throw new Error(j.detail || ('HTTP ' + x.r.status));
+      if (j.ok === false) throw new Error(j.detail || j.error || '证据引擎未返回结果');
+      evItems = j.items || [];
+      buildMarks();
+      paintBody();
+      evState = 'ready';
+      var anchored = (j.anchored != null) ? j.anchored
+        : evItems.filter(function (it) { return it.found; }).length;
+      if (!evItems.length) {
+        setEvBar('证据接口没有返回问题条目（' + (j.degraded ? '引擎降级' : '该篇暂无可定位问题') + '）。', true);
+      } else if (!evMarks.length) {
+        setEvBar('接口给出 <b>' + evItems.length + '</b> 条问题（' + anchored +
+          ' 条有锚点），但当前文本窗口里没有找到可高亮片段；可点「纯文本 / 继续读」或到 <a href="/evidence?pid=' +
+          encodeURIComponent(pid) + '&line=' + biz + '&auto=1">问题清单</a> 查看原文引用。', true);
+      } else {
+        setEvBar('✓ 已在原文高亮 <b>' + evMarks.length + '</b> / ' + evItems.length +
+          ' 条问题（锚点来自 /api/evidence' + (j.cached ? ' · 缓存' : '') +
+          (anchored ? ' · ' + anchored + ' 条逐字命中' : '') + '）' +
+          (wantLine ? ' · 已定位第 <b>' + wantLine + '</b> 条' : ''), false);
+      }
+      if (wantLine) scrollToLine(wantLine);
+      // 锚点万一落在首屏窗口之外：再补一页，然后重画
+      if (evItems.length && docText.length < (total || 0)) {
+        var far = 0;
+        evItems.forEach(function (it) { if (it.offset != null) far = Math.max(far, it.offset); });
+        if (far > docText.length + 20) load(true);
+      }
+    }).catch(function (e) {
+      evState = 'error';
+      setEvBar('证据定位失败：' + escHtml(e.message) +
+        '（<a href="/evidence?pid=' + encodeURIComponent(pid) + '&line=' + biz + '&auto=1">去问题清单</a>）', true);
+    });
+  }
+
+  function render(d, append) {
+    if (!append) {
+      el('title').textContent = d.title || d.pid;
+      document.title = (d.title || '读原文') + ' · 群智';
+      el('crumb').textContent = d.title || d.pid;
+      if (window.QZNav) window.QZNav.setTitle(d.title || d.pid);
+      var meta = [];
+      if (d.year) meta.push('<span class="pill">' + d.year + '</span>');
+      if (d.field) meta.push('<span class="pill">' + d.field + '</span>');
+      if (d.venue) meta.push('<span class="pill">' + d.venue + '</span>');
+      meta.push('<span>' + d.pid + '</span>');
+      el('meta').innerHTML = meta.join(' ');
+      if (d.abstract) { el('abs').style.display = ''; el('absText').textContent = d.abstract; el('absText').style.fontSize = (fs - 1.5) + 'px'; }
+      if (d.url) { el('src').style.display = ''; el('src').href = d.url; }
+      if (window.QZNav) window.QZNav.refresh();
+      el('ev').style.display = '';
+      el('ev').href = '/evidence?pid=' + encodeURIComponent(d.pid) +
+        '&line=' + encodeURIComponent(biz) + '&auto=1';
+      if (!d.has_fulltext) {
+        paperNotice = '<div class="warn">库内暂无这篇的全文（可能未抓取或为扫描版）。' +
+          (d.url ? '可以 <a href="' + escHtml(d.url) + '" target="_blank" rel="noopener">打开 arXiv 原文 ↗</a>，' : '') +
+          '摘要和问题清单仍可查看。</div>';
+      }
+      el('modes').style.display = '';
+    }
+    if (d.text) docText += d.text;
+    total = d.total || docText.length;
+    offset = (d.offset || 0) + (d.text ? d.text.length : 0);
+    paintBody();
+    el('more').style.display = (total > offset) ? '' : 'none';
+  }
+
+  function boot(d) {
+    paper = d;
+    arxivId = d.arxiv_id || '';
+    if (arxivId) {
+      el('modeHtml').disabled = false;
+      if (q.get('mode') === 'text') {
+        showText();
+      } else {
+        // 先把重排文本准备好，HTML 探测成功后无缝切换
+        showTextViewOnly();
+        probeAndShowHtml(arxivId);
+      }
+    } else {
+      el('modeHtml').disabled = true;
+      el('modeHtml').title = '这篇没有 arXiv HTML 版';
+      showText();
+      htmlNotice = '<div class="warn">这篇没有 arXiv HTML 版，显示重排文本（图/公式不可见）。</div>';
+      renderNotice();
+    }
+    // QBUG-001：正文一到就异步拉证据；不阻塞首屏
+    loadEvidence();
+  }
+
+  function load(append) {
+    if (loading) return;
+    loading = true;
+    // 首屏取 8 万字符：/api/evidence 的引擎只看前 6 万字符，锚点一定落在窗口内
+    fetch('/api/paper/' + encodeURIComponent(pid) + '/text?offset=' + offset + '&limit=80000', { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (d) { if (!d.ok) throw new Error(d.detail || '加载失败'); render(d, append); if (!append) boot(d); })
+      .catch(function (e) {
+        el('notice').innerHTML = '<div class="warn">加载失败：' + escHtml(e.message) + '</div>';
+      })
+      .then(function () { loading = false; });
+  }
+
+  el('loadMore').onclick = function () { load(true); };
+
+  if (!pid) {
+    el('title').textContent = '缺少论文编号';
+    el('notice').innerHTML = '<div class="warn">请从论文检索或问题清单进入。</div>';
+    return;
+  }
+  load(false);
+})();
+</script>
+<script>
+// 2026-11-22 BUG-002/003/005：页脚库规模统一从 /api/kb/stats 读，并展示 call_id。
+(function () {
+  function wan(n) { return (n == null || isNaN(n)) ? "—" : (n / 10000).toFixed(1) + " 万"; }
+  function num(n) { return (n == null || isNaN(n)) ? "—" : Number(n).toLocaleString("zh-CN"); }
+  fetch("/api/kb/stats", { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
+    if (!j || !j.ok) return;
+    var a = document.getElementById("ftPapers"), b = document.getElementById("ftFull");
+    if (a) { a.textContent = wan(j.papers); a.title = "papers = " + num(j.papers); }
+    if (b) { b.textContent = wan(j.fulltext); b.title = "fulltext = " + num(j.fulltext); }
+    var c = document.getElementById("ftCall");
+    if (c && j.call_id) {
+      c.innerHTML = '<a class="call-badge" href="/api/call/' + encodeURIComponent(j.call_id) +
+        '" target="_blank" rel="noopener" title="call_id: ' + j.call_id + ' · 点击回放">call_id ' +
+        String(j.call_id).replace(/^qz_\d+_/, "") + "</a>";
+    }
+  }).catch(function () {});
+})();
+</script>
+<script src="/static/qz-nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,3392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>群智 · 科研决策预演智能体</title>
+<style>
+:root {
+  --primary:#2563EB; --primary-light:#DBEAFE; --accent:#0EA5E9;
+  --bg:#FAF6F0; --card:#FFFFFF; --card2:#F5F0E8;
+  --border:#EAE3D8; --text:#1F2937; --dim:#6B7280;
+  --green:#059669; --warn:#D97706; --danger:#DC2626;
+  --shadow:0 2px 8px rgba(31,41,55,.05);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Microsoft YaHei','PingFang SC',system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+.topbar { display:flex; align-items:center; justify-content:space-between; padding:14px 24px; background:var(--card); border-bottom:1px solid var(--border); box-shadow:var(--shadow); }
+.topbar h1 { font-size:18px; display:flex; align-items:center; gap:10px; color:var(--text); }
+.topbar h1 .logo-img { width:30px; height:30px; border-radius:6px; object-fit:cover; }
+.topbar h1 .logo { color:var(--primary); }
+.badge { font-size:11px; background:var(--primary-light); color:var(--primary); padding:3px 10px; border-radius:14px; font-weight:600; }
+.wrap { display:flex; min-height:calc(100vh - 57px); }
+.sidebar { width:200px; background:var(--card); border-right:1px solid var(--border); padding:14px 10px; }
+.nav-item { padding:10px 14px; border-radius:8px; margin-bottom:3px; cursor:pointer; color:var(--dim); font-size:13px; display:flex; align-items:center; gap:9px; transition:all .15s; line-height:1.35; }
+/* ① 图标与文字垂直对齐：emoji 基线会偏上，给图标固定行高与宽度 */
+.nav-item > em, .nav-item > span.ic { font-style:normal; display:inline-flex; align-items:center; justify-content:center; width:1.35em; height:1.35em; line-height:1; font-size:14px; flex:0 0 1.35em; }
+.nav-item:hover { background:var(--card2); color:var(--primary); }
+.nav-item.active { background:var(--primary-light); color:var(--primary); font-weight:700; }
+.main { flex:1; padding:22px 26px; max-width:1100px; }
+.card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px; margin-bottom:16px; box-shadow:var(--shadow); }
+.card h3 { font-size:15px; color:var(--text); margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+.card h3 .ico { color:var(--primary); }
+label { font-size:12px; color:var(--dim); display:block; margin-bottom:5px; }
+input[type=text], textarea, select { width:100%; background:#fff; border:1px solid var(--border); color:var(--text); border-radius:8px; padding:10px 12px; font-size:13px; outline:none; transition:border .15s; }
+input:focus, textarea:focus { border-color:var(--primary); box-shadow:0 0 0 3px var(--primary-light); }
+textarea { min-height:50px; resize:vertical; }
+.btn { background:var(--primary); color:#fff; border:none; padding:10px 20px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; transition:all .15s; }
+.btn:hover { background:#1D4ED8; }
+.btn:disabled { opacity:.5; cursor:not-allowed; }
+.btn-ghost { background:transparent; border:1px solid var(--border); color:var(--dim); }
+.btn-ghost:hover { color:var(--primary); border-color:var(--primary); }
+.row { display:flex; gap:16px; }
+.col { flex:1; }
+/* 团队 */
+.team-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.member { background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:10px; font-size:12px; }
+.member .m-head { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.member .avatar { width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; background:var(--primary-light); color:var(--primary); font-weight:700; }
+.member .m-name { font-weight:700; font-size:13px; }
+.member .m-sub { color:var(--dim); font-size:11px; }
+.member .m-speech { margin-top:6px; font-size:12px; color:#374151; line-height:1.5; background:#fff; border:1px solid var(--border); border-radius:6px; padding:7px; min-height:44px; }
+/* 日志流 */
+.log-area { max-height:300px; overflow-y:auto; }
+.log-item { padding:6px 10px; border-left:3px solid var(--border); margin-bottom:4px; font-size:12px; line-height:1.5; border-radius:0 6px 6px 0; }
+.log-item.speech { border-left-color:var(--accent); background:var(--card2); }
+.log-item.collision { border-left-color:#D97706; background:#FEF3E2; box-shadow:inset 0 0 0 1px rgba(217,119,6,.25); }
+.log-item.system { border-left-color:var(--primary); color:var(--dim); }
+.log-item.round { border-left-color:var(--warn); font-weight:700; color:var(--warn); }
+.log-item.intervention { border-left-color:#B91C1C; color:#B91C1C; font-weight:600; }
+
+
+/* ===== 定位声明（决策预演 ≠ 研究报告）===== */
+.pos-box { margin-bottom:14px; padding:13px 15px; background:#F1F5F9;
+  border-left:4px solid #64748B; border-radius:0 10px 10px 0; }
+.pos-box .pt { font-size:13.5px; font-weight:800; color:#334155; margin-bottom:8px;
+  letter-spacing:.2px; }
+.pos-box .pi { font-size:12.5px; color:#475569; line-height:1.85; margin-top:5px; }
+.pos-box .pi b { color:#1E293B; font-weight:700; }
+.pos-box .pi em { font-style:normal; color:#B45309; font-weight:700; }
+
+/* ===== 完整讨论报告（Markdown 渲染）===== */
+.md-wrap { background:var(--card); border:1px solid var(--border); border-radius:12px;
+  padding:18px 22px; margin-bottom:14px; }
+.md-head { display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding-bottom:12px; margin-bottom:14px; border-bottom:1px solid var(--border); }
+.md-head .t { font-size:14.5px; font-weight:800; color:var(--primary); display:flex; align-items:center; gap:8px; }
+.md-head .b { font-size:12px; color:#1D4ED8; background:#EFF6FF; border:1px solid #BFDBFE;
+  border-radius:6px; padding:4px 11px; cursor:pointer; font-weight:600; font-family:inherit; }
+.md-body { font-size:13.5px; line-height:1.9; color:#1F2937; }
+.md-body h1 { font-size:19px; font-weight:800; color:#111827; margin:4px 0 14px; line-height:1.5;
+  padding-left:11px; border-left:4px solid var(--primary); }
+.md-body h2 { font-size:16px; font-weight:800; color:#1D4ED8; margin:22px 0 10px; line-height:1.55;
+  padding-bottom:6px; border-bottom:1px dashed #E3D9C8; }
+.md-body h3 { font-size:14px; font-weight:700; color:#374151; margin:16px 0 8px; }
+.md-body p { margin:0 0 11px; }
+.md-body ul, .md-body ol { margin:6px 0 12px; padding-left:1.6em; }
+.md-body li { margin-bottom:5px; line-height:1.85; }
+.md-body li::marker { color:var(--primary); font-weight:700; }
+.md-body blockquote { margin:10px 0; padding:9px 14px; background:#F8FAFC;
+  border-left:3px solid #93C5FD; border-radius:0 7px 7px 0; color:#374151; }
+.md-body code { background:#F1F5F9; border-radius:4px; padding:1px 5px;
+  font-family:ui-monospace,Consolas,monospace; font-size:12.5px; color:#B91C1C; }
+.md-body strong { color:#111827; font-weight:800; }
+.md-body hr { border:none; border-top:1px solid var(--border); margin:16px 0; }
+.md-body .mdt { border-collapse:collapse; width:100%; margin:10px 0; font-size:12.5px; }
+.md-body .mdt th, .md-body .mdt td { border:1px solid var(--border); padding:6px 9px; text-align:left; }
+.md-body .mdt th { background:var(--card2); font-weight:700; }
+
+/* ===== 评审 v6 面板 ===== */
+.v6-wrap { border:1px solid var(--border); border-radius:12px; overflow:hidden; margin:14px 0; background:var(--card); }
+.v6-head { padding:13px 18px; background:linear-gradient(135deg,#F5F3FF,#FAF8FF);
+  border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.v6-head .t { font-size:14.5px; font-weight:800; color:#5B21B6; display:flex; align-items:center; gap:8px; }
+.v6-head .s { font-size:11.5px; color:#6B7280; }
+.v6-body { padding:16px 18px; }
+.v6-anchor { display:flex; gap:10px; align-items:flex-start; padding:12px 14px; border-radius:9px; margin-bottom:14px; }
+.v6-anchor.ok { background:#ECFDF5; border:1px solid #A7F3D0; border-left:4px solid #059669; }
+.v6-anchor.bad { background:#FEF2F2; border:1px solid #FECACA; border-left:4px solid #DC2626; }
+.v6-anchor.warn { background:#FFFBEB; border:1px solid #FDE68A; border-left:4px solid #D97706; }
+.v6-anchor .ic { font-size:17px; line-height:1.3; flex:0 0 auto; }
+.v6-anchor .tx { font-size:12.8px; line-height:1.75; }
+.v6-anchor .tx b { font-size:13.2px; }
+.v6-sec { margin-bottom:16px; }
+.v6-sec:last-child { margin-bottom:0; }
+.v6-sec > .lb { font-size:12.5px; font-weight:800; color:#4B5563; letter-spacing:.05em;
+  margin-bottom:9px; display:flex; align-items:center; gap:7px; }
+.v6-dim { background:var(--card2); border:1px solid #E7DFD2; border-radius:9px;
+  padding:11px 13px; margin-bottom:8px; }
+.v6-dim .top { display:flex; align-items:center; gap:9px; margin-bottom:5px; }
+.v6-dim .nm { font-size:13.5px; font-weight:800; color:#111827; }
+.v6-dim .lv { font-size:11.5px; font-weight:800; border-radius:5px; padding:2px 9px; }
+.v6-dim .why { font-size:12.5px; color:#4B5563; line-height:1.78; }
+.v6-dim .ev { margin-top:7px; padding:8px 11px; background:#fff; border:1px dashed #D6CCBC;
+  border-radius:7px; font-size:12px; color:#4B5563; line-height:1.75; }
+.v6-dim .ev .k { color:#6B7280; font-weight:700; }
+.v6-note { font-size:11.8px; color:#6B7280; line-height:1.7; }
+@media (max-width:640px){
+  .md-wrap { padding:14px 15px; }
+  .md-body { font-size:13px; }
+  .v6-body { padding:13px; }
+}
+
+/* ===== 决策建议书排版（重做）===== */
+.hr-wrap { background:var(--card); border:1px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:14px; }
+.hr-head { display:flex; align-items:center; justify-content:space-between; gap:10px;
+  align-content:center;
+  padding:12px 16px; background:linear-gradient(135deg,#EFF6FF,#F5F9FF);
+  border-bottom:1px solid var(--border); }
+.hr-head .ttl { font-size:14.5px; font-weight:800; color:#1D4ED8; display:flex; align-items:center; gap:8px; line-height:1.2; }
+.hr-head .cp { font-size:13px; color:#1D4ED8; background:#fff; border:1.5px solid #93C5FD;
+  border-radius:7px; padding:5px 13px; cursor:pointer; font-family:inherit; font-weight:700; }
+.hr-head .cp:hover { background:var(--primary-light); }
+.hr-body { padding:16px; }
+
+/* 结论：主色大卡 */
+.hr-concl { background:linear-gradient(135deg,#EAF3FF 0%,#F7FBFF 100%); border:1px solid #BFDBFE;
+  border-left:8px solid var(--primary); border-radius:10px; padding:17px 20px; margin-bottom:18px;
+  box-shadow:0 2px 10px rgba(37,99,235,.07); }
+.hr-concl .lb { font-size:14px; font-weight:800; color:#1E4E8C; letter-spacing:.06em;
+  margin-bottom:9px; display:flex; align-items:center; gap:7px; }
+.hr-concl .tx { font-size:17px; font-weight:700; color:#111827; line-height:1.80;
+  letter-spacing:.01em; }
+
+/* 小标题 */
+.hr-sec { margin-bottom:14px; }
+.hr-sec:last-child { margin-bottom:0; }
+.hr-sec > .lb { font-size:14px; font-weight:800; color:#374151; letter-spacing:.05em;
+  margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+.hr-sec > .lb .ic { font-size:15px; line-height:1; }
+
+/* 三步行动 */
+.hr-step { display:flex; gap:12px; padding:11px 13px; background:#F8F3EC;
+  border:1px solid #E3D9C8; border-radius:9px; margin-bottom:8px; line-height:1.72; }
+.hr-step:last-child { margin-bottom:0; }
+.hr-step .n { flex:0 0 22px; height:22px; border-radius:50%; background:var(--primary); color:#fff;
+  font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; margin-top:1px; }
+.hr-step .tx { font-size:13.5px; color:#1F2937; line-height:1.72; }
+.hr-step .tx b { color:var(--primary); }
+
+/* 盲区 */
+.hr-blind { background:#FFE8D1; border:1px solid #F5C68F; border-left:5px solid #B45309;
+  border-radius:9px; padding:13px 15px; font-size:13.5px; line-height:1.82; color:#111827; }
+.hr-blind .k { color:var(--warn); font-weight:700; }
+
+/* 依据：弱化脚注 */
+.hr-evid { font-size:12.5px; color:#3F3F46; line-height:1.88; padding-left:14px;
+  border-left:3px solid #D6CCBC; }
+
+
+/* 步骤内部的「结论 / 支撑 / 动作」子行 */
+.hr-sub { display:flex; gap:8px; margin-top:7px; padding-top:7px; border-top:1px dashed #E3D9C8; }
+.hr-sub:first-of-type { border-top:none; padding-top:0; }
+.hr-sub .sk { flex:0 0 40px; font-size:12px; font-weight:800; color:#1D4ED8;
+  background:#DBEAFE; border:1px solid #BFDBFE; border-radius:5px; padding:1px 0;
+  text-align:center; height:1.7em; line-height:1.7em; }
+.hr-sub .sv { font-size:12.8px; color:#1F2937; line-height:1.8; }
+
+/* 降级：首行强调 + 其余平铺 */
+.hr-fallback .lead { font-size:15px; font-weight:700; color:var(--primary); line-height:1.65; margin-bottom:10px; }
+.hr-fallback .rest { font-size:13.5px; line-height:1.9; white-space:pre-wrap;
+  overflow-wrap:anywhere; word-break:break-word; color:#1F2937; }
+
+@media (max-width:640px){
+  .hr-body { padding:12px; }
+  .hr-concl .tx { font-size:15px; }
+  .hr-step { padding:9px 10px; }
+}
+
+/* 报告 */
+.report-box { background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:14px; font-size:13px; line-height:1.8; white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-word; max-width:100%; }
+/* V15 修复（2026-10-09）：报告里含知网等超长 URL（200+ 字符无空格），pre-wrap 不会断行会撑破容器。
+   overflow-wrap:anywhere + word-break 让长串强制折行；表格单元格同理。 */
+.report-box table, .report-box td, .report-box th { overflow-wrap:anywhere; word-break:break-word; }
+.report-box a { overflow-wrap:anywhere; word-break:break-all; }
+.report-box .one-line { font-size:15px; font-weight:700; color:var(--primary); margin-bottom:10px; }
+.report-box .sec { margin-bottom:8px; }
+.report-box .sec b { color:var(--primary); }
+.dim-row { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+.dim-box { background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:8px 12px; text-align:center; flex:1; min-width:90px; }
+.dim-box .v { font-size:20px; font-weight:800; color:var(--primary); }
+.dim-box .l { font-size:11px; color:var(--dim); margin-top:2px; }
+.loading { color:var(--primary); font-size:13px; animation:pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+.preset-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:10px; }
+.preset-card { background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:12px; cursor:pointer; transition:all .15s; }
+.preset-card:hover { border-color:var(--primary); background:var(--primary-light); }
+.preset-card .t { font-size:13px; font-weight:600; margin-bottom:4px; }
+.preset-card .d { font-size:11px; color:var(--dim); }
+.hidden { display:none; }
+
+/* ===== 移动端适配（手机/平板） ===== */
+@media (max-width: 768px) {
+  .topbar { padding: 12px 16px; }
+  .topbar h1 { font-size: 16px; }
+  .topbar > div:last-child { display: none; }  /* 隐藏副标语，省空间 */
+  .wrap { flex-direction: column; }
+  /* 侧边栏 → 顶部横条导航 */
+  .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border);
+             padding: 8px 10px; display: flex; gap: 6px; overflow-x: auto; }
+  .sidebar .nav-item { flex: 1; justify-content: center; padding: 10px 8px;
+                       font-size: 13px; white-space: nowrap; }
+  .main { padding: 14px; }
+  /* 团队 3列 → 2列（手机更紧凑） */
+  .team-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .member .m-speech { min-height: 38px; font-size: 11px; }
+  /* 卡片间距压缩 */
+  .card { padding: 14px; margin-bottom: 12px; }
+  .card h3 { font-size: 14px; }
+  /* 输入框/按钮触屏友好 */
+  input[type=text], textarea, select { font-size: 15px; padding: 12px 12px; }
+  textarea { min-height: 60px; }
+  .btn { padding: 12px 18px; font-size: 14px; }
+  /* 预设卡片单列 */
+  .preset-grid { grid-template-columns: 1fr; }
+  .preset-card { padding: 14px; }
+  .preset-card .t { font-size: 14px; }
+  .preset-card .d { font-size: 12px; }
+  /* 评分块两列 */
+  .dim-box { min-width: 44%; }
+  /* 日志区更高（手机看更多） */
+  .log-area { max-height: 340px; }
+  .log-item { font-size: 13px; }
+  /* 报告字号稍大（手机阅读） */
+  .report-box { font-size: 14px; padding: 12px; }
+  /* 顶部操作行：按钮和输入不挤 */
+  #view-start .card > div:nth-child(4) { flex-wrap: wrap; }
+  #scenarioSelect { width: 100% !important; margin-bottom: 8px; }
+  #startBtn { width: 100%; }
+  .loading { width: 100%; margin-top: 6px; }
+}
+
+/* ---- 首屏品牌与可信度（2026-10-21 提升专业感）---- */
+.qz-brand{display:flex;align-items:center;gap:.55rem;justify-content:center;
+  margin-bottom:1.15rem;letter-spacing:.18em;font-size:.78rem;
+  color:rgba(226,232,240,.72);text-transform:uppercase}
+.qz-brand .qz-dots{display:inline-flex;gap:3px;align-items:center}
+.qz-brand .qz-dots i{width:5px;height:5px;border-radius:50%;
+  background:rgba(120,170,255,.85);display:block}
+.qz-brand .qz-brand-name{color:#EAF2FF;font-weight:600;letter-spacing:.32em}
+.qz-brand .qz-brand-en{opacity:.65;letter-spacing:.14em;font-size:.72rem}
+.qz-h1sub{margin-top:.9rem;color:rgba(214,224,238,.78);font-size:clamp(.82rem,2.1vw,.95rem);
+  line-height:1.75;max-width:34rem;margin-left:auto;margin-right:auto;font-weight:300}
+.qz-cred{display:flex;flex-wrap:wrap;gap:.55rem 1.1rem;justify-content:center;
+  margin-top:22px;font-size:.74rem;color:rgba(196,210,230,.66);letter-spacing:.02em}
+.qz-cred span{white-space:nowrap}
+.qz-cred b{color:rgba(150,190,255,.92);font-weight:600;margin-right:.25em}
+/* qz-skip 样式沿用文件原有的规则（本块已并入） */
+
+</style>
+<!-- ===== 群智 · 涌现 开场（v2：四幕叙事 + 用户主动进入）===== -->
+<style id="qz-intro-css">
+#qz-intro{position:fixed;inset:0;z-index:99999;background:#0A0F1A;overflow:hidden;
+  transition:opacity .5s ease;opacity:1;font-family:inherit}
+#qz-intro.qz-intro-out{opacity:0}
+#qz-intro-cv{position:absolute;inset:0;display:block}
+#qz-intro-vig{position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(circle at center,rgba(10,15,26,0) 34%,rgba(10,15,26,.92) 100%)}
+#qz-intro-fly{position:absolute;inset:0;pointer-events:none;z-index:5}
+#qz-intro-fly span{position:absolute;font-size:18px;font-weight:600;
+  transform:translate(-50%,-50%);opacity:0;white-space:nowrap;
+  text-shadow:0 0 10px rgba(255,122,69,.9),0 2px 6px rgba(0,0,0,.85);
+  animation:qzFlyOut .95s cubic-bezier(.25,.6,.35,1) forwards}
+/* ① 发散：按 --dx/--dy 向四周飞散并淡出，而不是原地堆着 */
+@keyframes qzFlyOut{
+  0%  {opacity:0;transform:translate(-50%,-50%) translate(0,0) scale(.55)}
+  16% {opacity:1;transform:translate(-50%,-50%) translate(0,0) scale(1.1)}
+  55% {opacity:.85;transform:translate(-50%,-50%) translate(calc(var(--dx) * .55),calc(var(--dy) * .55)) scale(.95)}
+  100%{opacity:0;transform:translate(-50%,-50%) translate(var(--dx),var(--dy)) scale(.55)}
+}
+
+/* 四个场景层：默认隐藏，.qz-on 才出现 */
+#qz-intro-s1,#qz-intro-s2,#qz-intro-s3,#qz-intro-s4{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;padding:24px;
+  opacity:0;pointer-events:none;transition:opacity .7s ease, transform .65s cubic-bezier(.2,.9,.3,1);z-index:4}
+/* ① 第四幕出现时，标题整层上移，与下方按钮分离（原本两者都 justify-content:center → 按钮和标题重叠） */
+#qz-intro-s3.qz-up{transform:translateY(-168px)}   /* 原 -78px：副标改两行后压住第四幕按钮 */
+
+#qz-intro-s1.qz-on,#qz-intro-s2.qz-on,#qz-intro-s3.qz-on,#qz-intro-s4.qz-on{
+  opacity:1;pointer-events:auto}
+/* ② 文字区柔和暗底：解决"主标题被粒子线段穿插遮挡" */
+#qz-intro-s2.qz-on,#qz-intro-s3.qz-on{
+  background:radial-gradient(ellipse 58% 38% at 50% 50%,
+    rgba(6,10,18,.90) 0%,rgba(6,10,18,.68) 48%,rgba(6,10,18,0) 100%)}
+#qz-intro-s1{align-items:center;justify-content:center}
+
+/* ---- 第一幕 ---- */
+.qz-h1{color:rgba(255,248,240,.90);font-size:clamp(1.5rem,4.6vw,2.5rem);font-weight:300;
+  letter-spacing:.10em;text-shadow:0 0 26px rgba(46,107,230,.5);
+  animation:qzUp .55s ease .10s both}
+.qz-h2{margin-top:1.1rem;color:rgba(255,250,244,.82);font-size:clamp(.9rem,2.6vw,1.1rem);
+  letter-spacing:.06em;animation:qzUp .55s ease .22s both}
+@keyframes qzUp{from{opacity:0;transform:translateY(16px);filter:blur(6px)}
+  to{opacity:1;transform:none;filter:blur(0)}}
+.qz-row{margin-top:1.6rem;width:min(92vw,560px);animation:qzUp .55s ease .34s both}
+#qz-in{width:100%;box-sizing:border-box;background:rgba(255,248,240,.05);
+  border:1px solid rgba(255,248,240,.22);border-radius:999px;color:#FFF8F0;
+  padding:15px 26px;font-size:15px;font-family:inherit;outline:none;
+  transition:.25s;backdrop-filter:blur(6px);text-align:center}
+#qz-in::placeholder{color:rgba(214,226,245,.80)}
+#qz-in:focus{border-color:rgba(74,140,255,.85);background:rgba(46,107,230,.14);
+  box-shadow:0 0 0 4px rgba(46,107,230,.16)}
+.qz-samples{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:20px;
+  animation:qzUp .55s ease .46s both}
+.qz-samples button{background:rgba(255,248,240,.05);border:1px solid rgba(255,248,240,.30);
+  color:rgba(224,232,245,.96);font-size:13px;padding:7px 15px;border-radius:999px;text-shadow:0 1px 2px rgba(0,0,0,.35);
+  cursor:pointer;font-family:inherit;transition:.2s}
+.qz-samples button:hover{background:rgba(46,107,230,.28);border-color:rgba(74,140,255,.7);
+  color:#FFF8F0}
+#qz-go{margin-top:22px;background:linear-gradient(135deg,#2E6BE6,#4A8CFF);border:none;
+  color:#fff;font-size:15.5px;font-weight:500;letter-spacing:.06em;padding:14px 42px;
+  border-radius:999px;cursor:pointer;font-family:inherit;transition:.22s;
+  box-shadow:0 6px 26px rgba(46,107,230,.45);animation:qzUp .55s ease .58s both}
+#qz-go:hover:not(:disabled){transform:translateY(-2px);
+  box-shadow:0 10px 34px rgba(46,107,230,.62)}
+@keyframes qzShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}
+  40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+#qz-in.qz-shake{animation:qzShake .42s ease;border-color:rgba(255,150,120,.85)!important;
+  box-shadow:0 0 0 4px rgba(255,120,90,.16)!important}
+.qz-tip{margin-top:12px;color:rgba(200,212,228,.82);font-size:13px;
+  animation:qzUp .55s ease .70s both}
+
+/* ---- 第二幕 ---- */
+.qz-stage{color:rgba(255,252,248,.96);font-weight:600;text-shadow:0 2px 10px rgba(0,0,0,.75);font-size:clamp(1.15rem,3.6vw,1.6rem);
+  letter-spacing:.10em;margin-bottom:26px;
+  animation:qzUp .8s ease both}
+.qz-agents{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px;
+  width:min(92vw,620px)}
+@media(max-width:560px){.qz-agents{grid-template-columns:1fr}}
+.qz-agent{display:flex;flex-direction:column;gap:2px;text-align:left;
+  padding:11px 15px;border-radius:12px;border:1px solid rgba(255,248,240,.10);
+  background:rgba(255,248,240,.03);opacity:0;transform:translateY(10px);
+  transition:opacity .5s ease,transform .5s ease,border-color .5s ease,background .5s ease}
+.qz-agent.on{opacity:1;transform:none;border-color:rgba(74,140,255,.55);
+  background:rgba(46,107,230,.14);box-shadow:0 0 20px rgba(46,107,230,.22)}
+.qz-agent b{color:#FFF8F0;font-size:14px;font-weight:500;letter-spacing:.04em}
+.qz-agent span{color:rgba(226,236,250,.88);font-size:12.5px;line-height:1.5;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+
+/* ---- 第三幕 ---- */
+#qz-title{color:#FFF8F0;font-weight:300;font-size:clamp(1.9rem,7vw,4.2rem);
+  letter-spacing:.15em;padding-left:.15em;white-space:nowrap;max-width:94vw;
+  text-shadow:0 0 26px rgba(46,107,230,.85),0 0 62px rgba(74,140,255,.55);
+  animation:qzTitleIn 1.05s ease .50s both, qzTitleSpace 1.4s cubic-bezier(.2,.9,.3,1) .50s both}
+@keyframes qzTitleIn{from{opacity:0;filter:blur(9px)}to{opacity:1;filter:blur(0)}}
+@keyframes qzTitleSpace{from{letter-spacing:.52em}to{letter-spacing:.15em}}
+#qz-sub{margin-top:1rem;color:rgba(255,250,244,.80);
+  font-size:clamp(.75rem,2.4vw,1rem);letter-spacing:.16em;padding-left:.16em;line-height:1.7;max-width:92vw;
+  animation:qzTitleIn 1s ease .80s both}
+
+/* ---- 第四幕 ---- */
+#qz-enter{background:linear-gradient(135deg,#2E6BE6,#4A8CFF);border:none;color:#fff;
+  font-size:16px;font-weight:500;letter-spacing:.08em;padding:15px 46px;
+  border-radius:999px;cursor:pointer;font-family:inherit;
+  box-shadow:0 8px 32px rgba(46,107,230,.55);transition:.22s;
+  animation:qzUp .8s ease both}
+#qz-enter:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(46,107,230,.72)}
+
+/* ---- 跳过 / 不再显示 ---- */
+#qz-skip{position:absolute;right:20px;top:18px;z-index:6;
+  background:rgba(8,12,22,.66);border:1px solid rgba(200,215,240,.62);color:#FFFFFF;box-shadow:0 2px 14px rgba(0,0,0,.5);
+  font-size:13.5px;padding:8px 17px;border-radius:999px;cursor:pointer;
+  font-family:inherit;letter-spacing:.04em;transition:.2s;backdrop-filter:blur(6px);
+  text-shadow:0 1px 3px rgba(0,0,0,.55)}
+#qz-skip:hover{background:rgba(46,107,230,.34);border-color:rgba(74,140,255,.75)}
+#qz-never{position:absolute;right:20px;bottom:16px;z-index:6;
+  background:none;border:none;color:rgba(232,240,252,.96);font-size:14.5px;
+  text-shadow:0 1px 3px rgba(0,0,0,.55);
+  cursor:pointer;font-family:inherit;text-decoration:underline;
+  text-underline-offset:3px;padding:6px 8px}
+#qz-never:hover{color:rgba(255,248,240,.72)}
+@media (prefers-reduced-motion:reduce){#qz-intro{display:none!important}}
+
+/* ① 退出时快速淡出（.30s）—— 否则「同一件事，六个人会给出六个答案」会与标题「群智 · 涌现」重叠 */
+#qz-intro-s2.qz-on{transition:opacity .55s ease}
+#qz-intro-s2{transition:opacity .30s ease}
+</style>
+
+</head>
+<body>
+<div class="topbar">
+  <h1><img class="logo-img" src="static/logo.png" alt="群智" onerror="this.style.display='none';this.nextElementSibling.style.display='inline';"> <span class="logo" style="display:none;">🧠</span> 群智 · 科研决策预演智能体 <span class="badge">V15</span></h1>
+  <div style="font-size:12px;color:var(--dim);">不是人问AI答，而是AI团队替你预演决策</div>
+</div>
+<div class="wrap">
+  <aside class="sidebar">
+    <div class="nav-item active" data-view="start">🚀 发起预演</div>
+    <div class="nav-item" data-view="monitor">📡 讨论监控</div>
+    <div class="nav-item" data-view="result">📊 决策报告</div>
+  </aside>
+  <main class="main">
+    <!-- 发起预演 -->
+    <div id="view-start" class="view">
+      <div class="card">
+        <h3><span class="ico">🎯</span> 发起一场科研决策预演</h3>
+        <div style="margin-bottom:12px;"><label>输入你的课题</label>
+          <input type="text" id="topicInput" placeholder="例如：大学生使用AI写作业，学校该禁止还是引导？">
+        </div>
+        <div style="margin-bottom:12px;"><label>你的初步想法（可选，主教练会帮你挖认知盲区）</label>
+          <textarea id="thoughtInput" placeholder="例如：应该引导而非禁止，但不知道怎么落地"></textarea>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;">
+          <select id="scenarioSelect" style="width:160px;">
+            <option value="教研">教研决策</option>
+            <option value="科研">科研决策</option>
+            <option value="通用">通用预演</option>
+          </select>
+          <button class="btn" id="startBtn">🚀 启动预演</button>
+          <span class="loading hidden" id="startingMsg">主教练正在联网检索并组建AI团队...</span>
+        </div>
+        <!-- B9（2026-10-10）：网络资料白名单网开关。默认关闭 = 只用论文（与既有实验口径一致）；
+             勾上则本局启用规则白名单，只有政府/国际组织/高校/权威媒体以及有 DOI/学术域名的
+             网络源才会进池，其余在注入前剔除并在「检索漏斗」里列出明细。 -->
+        <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:12px;padding:9px 11px;background:var(--bg);border-radius:8px;">
+          <input type="checkbox" id="allowWebChk" style="margin-top:3px;">
+          <label for="allowWebChk" style="cursor:pointer;font-size:12.5px;line-height:1.7;">
+            启用<b>网络资料白名单网</b>（本局）
+            <span style="color:var(--dim);">— 不勾＝只用学术文献（默认）；勾上后网络资料只有
+            <b>政府/国际组织/高校/权威媒体</b>或<b>有 DOI / 学术域名</b>的才进池，
+            其余在注入前剔除，明细见报告的「检索漏斗」</span>
+          </label>
+        </div>
+        <!-- V16.2 插件化：评审器由用户自己选 ——「老版本就是快，新版本需要更多时间，让用户自己选」。
+             清单从 /api/review/plugins 动态取（本页无写死的评审器），因此以后新增评审器不用改前端。 -->
+        <div style="margin-bottom:12px;padding:10px 12px;background:var(--bg);border-radius:8px;">
+          <div style="font-size:13px;font-weight:600;margin-bottom:6px;">🔍 评审器（自己选：要快，还是要准）</div>
+          <div id="pluginPicker" style="display:flex;flex-direction:column;gap:7px;">
+            <span style="font-size:12px;color:var(--dim);">正在读取可用评审器…</span>
+          </div>
+        </div>
+        <div id="startStatus" style="font-size:13px;color:var(--dim);"></div>
+        <!-- 输入澄清卡片（默认隐藏，点启动预演后按需展开） -->
+        <div id="intentBox" class="hidden" style="margin-top:14px;border:1px solid #DED7CC;
+             border-radius:12px;background:#fff;padding:16px 18px;">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+            <span id="intentBadge" style="font-size:12px;font-weight:600;border-radius:5px;
+                  padding:2px 9px;background:#EEF3FE;color:#1D4ED8;border:1px solid #D3E0FA;"></span>
+            <span id="intentClarity" style="font-size:12px;color:#6E6858;"></span>
+            <span id="intentReason" style="font-size:12px;color:#6E6858;"></span>
+          </div>
+          <div id="intentMissing" style="font-size:12.5px;color:#91621A;background:#FCF4E4;
+               border:1px solid #F0E0BD;border-radius:8px;padding:9px 12px;margin-bottom:12px;
+               line-height:1.7;"></div>
+          <div style="font-size:12px;color:#6E6858;margin-bottom:6px;">
+            建议改成下面这个更明确的问题（可以直接编辑）：
+          </div>
+          <textarea id="intentRewrite" rows="3" style="width:100%;box-sizing:border-box;
+               border:1px solid #DED7CC;border-radius:8px;padding:10px 12px;font-size:13.5px;
+               line-height:1.6;font-family:inherit;color:#17171C;resize:vertical;"></textarea>
+          <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">
+            <button id="intentUseBtn" type="button" style="border:none;border-radius:8px;
+                 background:#1D4ED8;color:#fff;padding:9px 18px;font-size:13px;font-weight:600;
+                 cursor:pointer;font-family:inherit;">用这个提法开始</button>
+            <button id="intentRawBtn" type="button" style="border:1px solid #CFC7B8;border-radius:8px;
+                 background:#fff;color:#3A3A42;padding:9px 18px;font-size:13px;
+                 cursor:pointer;font-family:inherit;">按我的原文开始</button>
+          </div>
+          <div style="font-size:11.5px;color:#8B8578;margin-top:9px;line-height:1.6;">
+            澄清只是建议：问题越明确，6 个角色越不会把时间浪费在猜你的意图上。
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h3><span class="ico">📚</span> 预设教研课题（一键演示）</h3>
+        <div class="preset-grid" id="presetGrid"></div>
+      </div>
+    </div>
+
+    <!-- 讨论监控 -->
+    <div id="view-monitor" class="view hidden">
+      <div class="card">
+        <h3><span class="ico">📡</span> 实时讨论监控 <span id="sessionLabel" style="font-size:12px;color:var(--dim);"></span></h3>
+        <div class="log-area" id="logArea"><div style="color:var(--dim);font-size:13px;">启动预演后，这里实时显示AI团队讨论过程...</div></div>
+      </div>
+      <div class="card">
+        <h3><span class="ico">🎭</span> AI 团队</h3>
+        <div class="team-grid" id="teamGrid"></div>
+      </div>
+    </div>
+
+    <!-- 决策报告 -->
+    <div id="view-result" class="view hidden">
+      <div class="card">
+        <h3><span class="ico">📊</span> 决策预演报告</h3>
+        <div id="resultBox"><div style="color:var(--dim);font-size:13px;">讨论完成后，这里展示决策报告、评分与认知盲区。</div></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+// API 地址：自动取当前页面域名（本地=127.0.0.1:5020，公网=同源隧道地址）
+// 体验版（nginx /staging/ 反代）：接口必须带上前缀，否则会打到线上
+var API = (window.location.pathname.indexOf("/staging") === 0)
+  ? (window.location.protocol + "//" + window.location.host + "/staging")
+  : (window.location.protocol + "//" + window.location.host);
+var ACCESS_KEY = "__QZ_DEMO_KEY__";   // 访问口令（与后端一致）
+var currentSession = null;
+// v6 等待计数（V16.1）：报告 done 之后 v6 还要约 157 秒才回来，用它在 done 之后继续轮询
+var v6WaitTries = 0;
+
+// ====================================================================
+// 会话状态保持（V16.1，2026-10-11）
+// 用户原话：「我在页面刷新过后，我原有的报告也消失了，跟我们正常用的网页不一样」
+// —— 这句话是对的。会话本来就存在**服务端**（/api/sandbox/result/<session_id>），
+//    前端却把它只放在一个内存变量里，刷新必然丢。这不是"限制"，是缺陷。
+// 修法（按正常网页的做法）：
+//   ① 会话号写进 **URL**（`?session=...`）→ 可收藏、可分享、可前进后退；
+//   ② 同时写 **localStorage** → 下次直接打开首页也能自动回到上一局；
+//   ③ 记住**停在哪个标签页**，刷新后回到同一页。
+//   读取优先级：URL > localStorage（URL 更具体，且支持"把这个结果发给别人"）。
+// ====================================================================
+function rememberSession(sid){
+  if(!sid) return;
+  try{ localStorage.setItem("qz_last_session", sid); }catch(e){}
+  try{
+    var u = new URL(window.location.href);
+    u.searchParams.set("session", sid);      // 保留原有的 ?key=...
+    history.replaceState(null, "", u.toString());
+  }catch(e){}
+}
+function readSessionFromLocation(){
+  try{
+    var s = new URLSearchParams(window.location.search).get("session");
+    if(s) return s;
+  }catch(e){}
+  try{ return localStorage.getItem("qz_last_session"); }catch(e){ return null; }
+}
+/* ===== [patch] ?reset=1 清除历史记忆，回到第一页 ===== */
+var QZ_RESET = (function(){
+  try { return new URLSearchParams(location.search).get("reset") === "1"; } catch(e){ return false; }
+})();
+if (QZ_RESET) {
+  try {
+    localStorage.removeItem("qz_last_view");
+    localStorage.removeItem("qz_last_session");
+  } catch(e){}
+  try {
+    var u = new URL(location.href);
+    u.searchParams.delete("session");
+    u.searchParams.delete("reset");
+    history.replaceState(null, "", u.pathname + (u.search ? u.search : ""));
+  } catch(e){}
+}
+
+function rememberView(v){
+  try{ localStorage.setItem("qz_last_view", v); }catch(e){}
+}
+function readViewFromLocation(){
+  try{ return localStorage.getItem("qz_last_view"); }catch(e){ return null; }
+}
+var eventSource = null;
+
+// 统一请求：自动带访问口令（用 query 参数，避免自定义 header 触发 CORS 预检）
+function apiFetch(url, opts){
+  opts = opts || {};
+  url = url + (url.indexOf("?") >= 0 ? "&" : "?") + "key=" + ACCESS_KEY;
+  return fetch(url, opts);
+}
+
+// Tab 切换
+document.querySelectorAll(".nav-item").forEach(function(b){
+  b.addEventListener("click", function(){
+    document.querySelectorAll(".nav-item").forEach(function(x){x.classList.remove("active");});
+    this.classList.add("active");
+    document.querySelectorAll(".view").forEach(function(x){x.classList.add("hidden");});
+    document.getElementById("view-" + this.dataset.view).classList.remove("hidden");
+    rememberView(this.dataset.view);      // V16.1：记住标签页，刷新后回到同一页
+  });
+});
+
+// 加载预设
+apiFetch(API + "/api/presets").then(function(r){return r.json();}).then(function(d){
+  var grid = document.getElementById("presetGrid");
+  (d.presets||[]).forEach(function(p){
+    var card = document.createElement("div");
+    card.className = "preset-card";
+    card.innerHTML = '<div class="t">🎯 ' + esc(p.title) + '</div><div class="d">' + esc(p.description) + '</div>';
+    card.onclick = function(){
+      document.getElementById("topicInput").value = p.title;
+      document.getElementById("thoughtInput").value = p.user_thought || "";
+      document.getElementById("scenarioSelect").value = p.scenario === "科研" ? "科研" : "教研";
+    };
+    grid.appendChild(card);
+  });
+});
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+
+// ====================================================================
+// 决策建议书渲染（重做 2026-10-18）
+// 后端 _humanize_report 产出固定格式纯文本，这里解析成有层级的卡片。
+// 解析失败自动降级为「首行强调 + 其余平铺」，不劣于原来的 pre-wrap。
+// ====================================================================
+function hrClean(s){
+  return String(s==null?"":s)
+    .replace(/\*\*(.+?)\*\*/g, "$1")     // 去 markdown 粗体
+    .replace(/^#+\s*/gm, "")             // 去标题井号
+    .replace(/^[-*]\s+/gm, "")           // 去列表符号
+    .trim();
+}
+function hrUnwrap(s){
+  // 去掉外层【】与多余引号
+  var x = String(s==null?"":s).trim();
+  x = x.replace(/^[【\[]\s*/, "").replace(/\s*[】\]]$/, "");
+  x = x.replace(/^["“”]+|["“”]+$/g, "");
+  return x.trim();
+}
+function hrBold(s){
+  // 把 **x** 转成 <b>，其余转义
+  var parts = String(s==null?"":s).split(/\*\*(.+?)\*\*/g);
+  var out = "";
+  for (var i = 0; i < parts.length; i++) {
+    out += (i % 2 === 1) ? "<b>" + esc(parts[i]) + "</b>" : esc(parts[i]);
+  }
+  return out;
+}
+
+// ====================================================================
+// 轻量 Markdown 渲染（2026-10-18）
+// 目的：完整讨论报告原先 esc() 直出，满屏 ## ** 1. 原始符号。
+// 安全：**先 esc 再变换**，所有 HTML 都由本函数生成，不引入用户内容里的标签。
+// 支持：# ~ ### 标题、**粗体**、`代码`、- / 1. 列表、> 引用、--- 分隔线、|表格|
+// ====================================================================
+function mdInline(s){
+  return s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+          .replace(/`([^`]+)`/g, "<code>$1</code>");
+}
+function renderMarkdown(src){
+  var txt = esc(String(src == null ? "" : src)).replace(/\r/g, "");
+  var lines = txt.split("\n");
+  var out = [], list = null, para = [], tbl = [];
+
+  function flushPara(){
+    if (para.length) { out.push("<p>" + mdInline(para.join(" ")) + "</p>"); para = []; }
+  }
+  function flushList(){
+    if (list) { out.push("<" + list.tag + ">" + list.items.map(function(x){return "<li>"+mdInline(x)+"</li>";}).join("") + "</" + list.tag + ">"); list = null; }
+  }
+  function flushTable(){
+    if (!tbl.length) return;
+    var rows = tbl.map(function(r){
+      return r.replace(/^\||\|$/g, "").split("|").map(function(c){ return c.trim(); });
+    }).filter(function(r){ return !r.every(function(c){ return /^:?-{2,}:?$/.test(c) || c === ""; }); });
+    if (rows.length){
+      var h = rows[0], body = rows.slice(1);
+      var s = '<table class="mdt"><thead><tr>' + h.map(function(c){return "<th>"+mdInline(c)+"</th>";}).join("") + "</tr></thead><tbody>";
+      body.forEach(function(r){
+        s += "<tr>" + h.map(function(_, i){ return "<td>" + mdInline(r[i] || "") + "</td>"; }).join("") + "</tr>";
+      });
+      out.push(s + "</tbody></table>");
+    }
+    tbl = [];
+  }
+
+  for (var i = 0; i < lines.length; i++){
+    var raw = lines[i], L = raw.trim();
+
+    if (/^\|/.test(L)) { flushPara(); flushList(); tbl.push(L); continue; }
+    if (tbl.length && !/^\|/.test(L)) flushTable();
+
+    if (!L) { flushPara(); flushList(); continue; }
+    if (/^-{3,}$/.test(L) || /^\*{3,}$/.test(L)) { flushPara(); flushList(); out.push("<hr>"); continue; }
+
+    var mh = L.match(/^(#{1,6})\s+(.*)$/);
+    if (mh) {
+      flushPara(); flushList();
+      var lv = Math.min(mh[1].length, 3);
+      out.push("<h" + lv + ">" + mdInline(mh[2]) + "</h" + lv + ">");
+      continue;
+    }
+    var mq = L.match(/^&gt;\s?(.*)$/);
+    if (mq) { flushPara(); flushList(); out.push("<blockquote>" + mdInline(mq[1]) + "</blockquote>"); continue; }
+
+    var mo = L.match(/^(\d+)[.、)]\s+(.*)$/);
+    if (mo) {
+      flushPara();
+      if (!list || list.tag !== "ol") { flushList(); list = {tag:"ol", items:[]}; }
+      list.items.push(mo[2]); continue;
+    }
+    var mu = L.match(/^[-*+]\s+(.*)$/);
+    if (mu) {
+      flushPara();
+      if (!list || list.tag !== "ul") { flushList(); list = {tag:"ul", items:[]}; }
+      list.items.push(mu[1]); continue;
+    }
+    flushList();
+    para.push(L);
+  }
+  flushPara(); flushList(); flushTable();
+  return out.join("");
+}
+function mdCopy(btn){
+  var box = document.getElementById("mdBody");
+  if (!box) return;
+  var txt = box.innerText || box.textContent || "";
+  var done = function(){ btn.textContent = "已复制 ✓"; setTimeout(function(){ btn.textContent = "复制全文"; }, 1600); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).then(done).catch(function(){ mdCopyFallback(txt, done); });
+  } else { mdCopyFallback(txt, done); }
+}
+function mdCopyFallback(txt, done){
+  try {
+    var ta = document.createElement("textarea");
+    ta.value = txt; ta.style.position = "fixed"; ta.style.left = "-9999px";
+    document.body.appendChild(ta); ta.select(); document.execCommand("copy");
+    document.body.removeChild(ta); done();
+  } catch (e) {}
+}
+
+function renderHumanReport(txt){
+  if (!txt) return "";
+  var raw = String(txt).replace(/\r/g, "");
+  var lines = raw.split("\n");
+
+  // ① 顶层只认**完整标签**（短标签「结论」「支撑」在真实数据里是步骤内部的子行）
+  var SEC = [
+    ["concl", /^(一句话结论|核心结论)[：:]?\s*$/],
+    ["concl", /^(一句话结论|核心结论)[：:]\s*/],
+    ["steps", /^(给决策者的?三步行动|三步行动|行动建议)[：:]?\s*$/],
+    ["steps", /^(给决策者的?三步行动|三步行动|行动建议)[：:]\s*/],
+    ["blind", /^(你的认知盲区|认知盲区)[：:]?\s*$/],
+    ["blind", /^(你的认知盲区|认知盲区)[：:]\s*/],
+    ["evid",  /^(支撑细节|依据)[：:]?\s*$/],
+    ["evid",  /^(支撑细节|依据)[：:]\s*/]
+  ];
+  // ② 子行标签（步骤内部）
+  var SUB = [
+    ["结论", /^结论[：:]\s*/],
+    ["支撑", /^支撑[：:]\s*/],
+    ["动作", /^动作[：:]\s*/]
+  ];
+
+  var concl = [], steps = [], blind = [], evid = [], other = [];
+  var cur = "other";
+
+  function bucket(k) { return {concl: concl, steps: steps, blind: blind, evid: evid, other: other}[k]; }
+
+  for (var i = 0; i < lines.length; i++) {
+    var L = hrClean(lines[i]);
+    if (!L) continue;
+
+    // 顶层分段？
+    var hit = null, rest = "";
+    for (var s = 0; s < SEC.length; s++) {
+      var m = L.match(SEC[s][1]);
+      if (m) { hit = SEC[s][0]; rest = L.slice(m[0].length).trim(); break; }
+    }
+    if (hit) { cur = hit; if (rest) bucket(cur).push({t: rest, sub: ""}); continue; }
+
+    // 步骤编号行（① ② ③ 或 【…】 单独成行）
+    var mnum = L.match(/^[①②③④⑤⑥⑦⑧⑨⑩][\s\u3000]*/);
+    if (mnum) {
+      cur = "steps";
+      steps.push({t: hrUnwrap(L.slice(mnum[0].length).trim()), sub: ""});
+      continue;
+    }
+
+    // 子行标签？
+    var subHit = null, subRest = "";
+    for (var k = 0; k < SUB.length; k++) {
+      var m2 = L.match(SUB[k][1]);
+      if (m2) { subHit = SUB[k][0]; subRest = L.slice(m2[0].length).trim(); break; }
+    }
+    if (subHit) {
+      if (cur === "steps" && steps.length) {
+        steps[steps.length - 1].sub += (steps[steps.length - 1].sub ? "\n" : "") + subHit + "｜" + subRest;
+      } else if (cur === "blind" || cur === "evid" || cur === "concl") {
+        bucket(cur).push({t: subRest, sub: subHit});
+      } else {
+        other.push({t: subRest, sub: subHit});
+      }
+      continue;
+    }
+
+    // 普通行：并入当前段
+    if (cur === "steps" && steps.length) {
+      steps[steps.length - 1].t += " " + L;
+    } else {
+      bucket(cur).push({t: L, sub: ""});
+    }
+  }
+
+  function joinTxt(arr) {
+    return arr.map(function(x){ return x.t; }).filter(function(x){ return x; }).join(" ");
+  }
+  function subRows(subStr) {
+    if (!subStr) return "";
+    var out = "";
+    subStr.split("\n").forEach(function(row){
+      var p = row.split("｜");
+      var k = p.shift(); var v = p.join("｜");
+      out += '<div class="hr-sub"><span class="sk">' + esc(k) + '</span>'
+           + '<span class="sv">' + hrBold(hrUnwrap(v)) + '</span></div>';
+    });
+    return out;
+  }
+
+  var found = (concl.length ? 1 : 0) + (steps.length ? 1 : 0) + (blind.length ? 1 : 0);
+  var h = '<div class="hr-wrap"><div class="hr-head"><div class="ttl">💡 决策建议</div>'
+        + '<button class="cp" type="button" onclick="hrCopy(this)">复制全文</button></div>'
+        + '<div class="hr-body" id="hrBody">';
+
+  if (found < 2) {
+    var all = lines.map(hrClean).filter(function(x){ return x; });
+    var lead = all.length ? hrUnwrap(all[0]) : "";
+    var rest2 = all.slice(1).join("\n");
+    h += '<div class="hr-fallback">'
+       + (lead ? '<div class="lead">' + hrBold(lead) + '</div>' : "")
+       + (rest2 ? '<div class="rest">' + esc(rest2) + '</div>' : "")
+       + '</div></div></div>';
+    return h;
+  }
+
+  if (concl.length) {
+    h += '<div class="hr-concl"><div class="lb">一句话结论</div><div class="tx">'
+       + hrBold(hrUnwrap(joinTxt(concl))) + '</div></div>';
+  }
+  if (steps.length) {
+    h += '<div class="hr-sec"><div class="lb"><span class="ic">🧭</span><span>三步行动</span></div>';
+    for (var s2 = 0; s2 < steps.length; s2++) {
+      h += '<div class="hr-step"><div class="n">' + (s2 + 1) + '</div><div class="tx">'
+         + hrBold(hrUnwrap(steps[s2].t)) + subRows(steps[s2].sub) + '</div></div>';
+    }
+    h += '</div>';
+  }
+  if (blind.length) {
+    h += '<div class="hr-sec"><div class="lb"><span class="ic">⚠️</span><span>你的认知盲区</span></div>'
+       + '<div class="hr-blind">' + hrBold(hrUnwrap(joinTxt(blind))) + '</div></div>';
+  }
+  if (evid.length) {
+    h += '<div class="hr-sec"><div class="lb"><span class="ic">📎</span><span>依据</span></div>'
+       + '<div class="hr-evid">' + hrBold(hrUnwrap(joinTxt(evid))) + '</div></div>';
+  }
+  if (other.length) {
+    h += '<div class="hr-sec"><div class="lb"><span class="ic">➕</span><span>其他</span></div>'
+       + '<div class="hr-evid">' + hrBold(hrUnwrap(joinTxt(other))) + '</div></div>';
+  }
+  h += '</div></div>';
+  return h;
+}
+
+function hrCopy(btn){
+  var box = document.getElementById("hrBody");
+  if (!box) return;
+  var txt = box.innerText || box.textContent || "";
+  var done = function(){ btn.textContent = "已复制 ✓"; setTimeout(function(){ btn.textContent = "复制全文"; }, 1600); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).then(done).catch(function(){ hrCopyFallback(txt, done); });
+  } else { hrCopyFallback(txt, done); }
+}
+function hrCopyFallback(txt, done){
+  try {
+    var ta = document.createElement("textarea");
+    ta.value = txt; ta.style.position = "fixed"; ta.style.left = "-9999px";
+    document.body.appendChild(ta); ta.select(); document.execCommand("copy");
+    document.body.removeChild(ta); done();
+  } catch (e) {}
+}
+
+
+// ====================================================================
+// 评审器选择器（V16.2 插件化）
+// 用户要求：「v3 的保留，就是给用户一个选择的机会，老版本就是快，新版本需要更多的时间，
+//           让用户自己选」。所以这里把每个插件的**耗时/成本/产出/已知缺陷**都摆出来，
+//           让用户在有信息的情况下取舍，而不是我们替他决定。
+// 清单**从后端动态取**（不写死）→ 以后加评审器不用动前端。
+// ====================================================================
+(function loadReviewPlugins(){
+  apiFetch(API + "/api/review/plugins").then(function(r){return r.json();}).then(function(d){
+    var box = document.getElementById("pluginPicker");
+    if(!box) return;
+    var ps = (d && d.plugins) || [];
+    if(!ps.length){
+      box.innerHTML = '<span style="font-size:12px;color:#DC2626;">⚠️ 没有可用评审器'
+        + (d && d.load_errors ? '（加载失败：' + esc(JSON.stringify(d.load_errors)) + '）' : '') + '</span>';
+      return;
+    }
+    var html = "";
+    ps.forEach(function(p){
+      var dis = p.available ? "" : " disabled";
+      html += '<label style="display:flex;gap:8px;align-items:flex-start;cursor:' + (p.available?"pointer":"not-allowed") + ';'
+            + (p.available ? "" : "opacity:.55;") + '">'
+            + '<input type="radio" name="reviewPlugin" value="' + esc(p.id) + '"'
+            + (p.default && p.available ? " checked" : "") + dis + ' style="margin-top:3px;">'
+            + '<span style="font-size:12.5px;line-height:1.6;">'
+            + '<b>' + esc(p.name) + '</b> '
+            + '<span style="color:var(--dim);">约 ' + esc(p.eta_sec) + ' 秒 ｜ 成本 ' + esc(p.cost)
+            + ' ｜ 产出：' + esc((p.metrics||[]).join('、')) + '</span>'
+            + '<br><span style="color:var(--dim);">' + esc(p.desc||'') + '</span>';
+      if(p.caveat){
+        html += '<br><span style="color:#D97706;">⚠️ 已知缺陷：' + esc(p.caveat) + '</span>';
+      }
+      if(!p.available){
+        html += '<br><span style="color:#DC2626;">✗ 当前不可用：' + esc(p.unavailable_reason||'原因未给出') + '</span>';
+      }
+      html += '</span></label>';
+    });
+    box.innerHTML = html;
+  }).catch(function(){
+    var box = document.getElementById("pluginPicker");
+    if(box) box.innerHTML = '<span style="font-size:12px;color:#DC2626;">⚠️ 评审器清单读取失败（不影响发起预演，将使用默认评审器）</span>';
+  });
+})();
+
+// 启动预演
+function doStart(topic){
+  var btn = document.getElementById("startBtn");
+  btn.disabled = true;
+  document.getElementById("startingMsg").classList.remove("hidden");
+  apiFetch(API + "/api/sandbox/start", {method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({
+      topic: topic,
+      user_thought: document.getElementById("thoughtInput").value.trim(),
+      max_rounds: 3,
+      info_mode: "coach_search",
+      scenario: document.getElementById("scenarioSelect").value,
+      // B9：未勾选时显式传 false（"只用论文"），勾选才传 true（开白名单网）
+      allow_web: !!(document.getElementById("allowWebChk") || {}).checked,
+      // V16.2 插件化：把用户选的评审器一起发过去（老版快 / 新版准，由用户自己权衡）
+      review_plugin: (function(){
+        var el = document.querySelector('input[name="reviewPlugin"]:checked');
+        return el ? el.value : null;
+      })()
+    })})
+
+  .then(function(r){return r.json();})
+  .then(function(d){
+    document.getElementById("startingMsg").classList.add("hidden");
+    btn.disabled = false;
+    if(d.status === "started"){
+      currentSession = d.session_id;
+      // V16.1：会话号写进 URL + localStorage，刷新/收藏/分享都不丢
+      rememberSession(currentSession);
+      document.getElementById("startStatus").innerHTML = "✅ 预演已启动，切换到「讨论监控」查看实时过程";
+      document.getElementById("sessionLabel").textContent = "（" + d.session_id + "）";
+      document.getElementById("logArea").innerHTML = "";
+      initTeam();
+      connectStream(d.session_id);
+      document.querySelector('[data-view="monitor"]').click();
+    } else {
+      document.getElementById("startStatus").textContent = "⚠️ 启动失败：" + JSON.stringify(d);
+    }
+  })
+  .catch(function(e){
+    document.getElementById("startingMsg").classList.add("hidden");
+    btn.disabled = false;
+    document.getElementById("startStatus").textContent = "⚠️ 连接失败：" + e.message;
+  });
+}
+
+// ---- 启动预演：先做一次输入意图体检，再决定是否澄清 ----
+document.getElementById("startBtn").onclick = function(){
+    /* ===== [patch] ?nointent=1 跳过意图体检，立即开始（录屏用） ===== */
+    var QZ_NOINTENT = (function(){
+      try { return new URLSearchParams(location.search).get("nointent") === "1"; } catch(e){ return false; }
+    })();
+    if (QZ_NOINTENT) {
+      var _t0 = (document.getElementById("topicInput") || {}).value || "";
+      _t0 = (_t0 || "").trim();
+      if (!_t0) {
+        var _st = document.getElementById("startStatus");
+        if (_st) _st.textContent = "⚠️ 请输入课题";
+        return;
+      }
+      doStart(_t0);
+      return;
+    }
+
+  var topic = document.getElementById("topicInput").value.trim();
+  if(!topic){ alert("请输入课题"); return; }
+  var box = document.getElementById("intentBox");
+  var status = document.getElementById("startStatus");
+  if(box) box.classList.add("hidden");
+  status.textContent = "正在检查输入是否明确…";
+
+  var thought = document.getElementById("thoughtInput") ? document.getElementById("thoughtInput").value.trim() : "";
+  apiFetch(API + "/api/intent", {method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({topic: topic, user_thought: thought})})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      // 接口失败 / 判定够明确 → 直接开始，用户无感
+      if(!d || d.ok === false || !d.needs_clarify){
+        status.textContent = "";
+        doStart(topic);
+        return;
+      }
+      // 需要澄清 → 展开卡片
+      status.textContent = "";
+      var map = {A:"研究问题", B:"方案比较", C:"初步想法"};
+      document.getElementById("intentBadge").textContent = map[d.intent] || "输入";
+      document.getElementById("intentClarity").textContent = "明确度 " + d.clarity + "/100";
+      document.getElementById("intentReason").textContent = d.reason || "";
+      var miss = d.missing || [];
+      var mEl = document.getElementById("intentMissing");
+      if(miss.length){
+        mEl.style.display = "";
+        mEl.innerHTML = "还缺这几样：<br>" + miss.map(function(x){
+          return "· " + esc(String(x));
+        }).join("<br>");
+      } else {
+        mEl.style.display = "none";
+      }
+      var rw = document.getElementById("intentRewrite");
+      rw.value = d.rewritten || topic;
+      box.classList.remove("hidden");
+
+      document.getElementById("intentUseBtn").onclick = function(){
+        var v = (rw.value || "").trim() || topic;
+        box.classList.add("hidden");
+        doStart(v);
+      };
+      document.getElementById("intentRawBtn").onclick = function(){
+        box.classList.add("hidden");
+        doStart(topic);
+      };
+    })
+    .catch(function(){
+      // 网络异常也不阻塞
+      status.textContent = "";
+      doStart(topic);
+    });
+};
+
+// 初始化团队展示
+function initTeam(){
+  var names = ["甲","乙","丙","丁","戊","己"];
+  var colors = ["#2563EB","#0EA5E9","#059669","#D97706","#DC2626","#7C3AED"];
+  var grid = document.getElementById("teamGrid");
+  grid.innerHTML = "";
+  names.forEach(function(n, i){
+    var m = document.createElement("div");
+    m.className = "member";
+    m.id = "member-" + n;
+    m.innerHTML = '<div class="m-head"><div class="avatar" style="background:' + colors[i] + '1A;color:' + colors[i] + ';">' + n + '</div>' +
+      '<div><div class="m-name">' + n + '</div><div class="m-sub">组建中...</div></div></div>' +
+      '<div class="m-speech">等待讨论...</div>';
+    grid.appendChild(m);
+  });
+}
+
+// SSE 讨论流
+// ====================================================================
+// 渲染一条讨论日志（V16.4 抽出）
+// 抽出来的原因：用户反馈「我的讨论记录怎么又不见了」——
+//   讨论日志**只在 SSE 实时流里渲染过**，刷新后没人重放。
+//   而 `session.logs` 一直是落盘的（50 条，字段与 SSE 完全一致）。
+//   数据没丢，只是**从来没人把它画出来**。现在 SSE 与重放共用这一个渲染器，
+//   避免"两处各写一份、改一处忘一处"。
+// ====================================================================
+function renderLogItem(item, opts){
+  opts = opts || {};
+  var area = document.getElementById("logArea");
+  if(!area || !item) return;
+  var div = document.createElement("div");
+  if(item.type === "speech"){
+    div.className = "log-item speech" + (item.collision ? " collision" : "");
+    div.innerHTML = '<b>' + esc(item.player||"") + '</b> · ' + esc(item.prototype_name||"") + ' · ' + esc(item.profession_name||"") + (item.collision ? ' <span style="color:#D97706;font-size:11px;">⚡跨学科碰撞</span>' : '') + '<br>' + esc(item.message||"");
+    var mem = document.getElementById("member-" + item.player);
+    if(mem && mem.querySelector(".m-speech")){
+      mem.querySelector(".m-speech").textContent = item.message || "";
+      mem.querySelector(".m-sub").textContent = (item.prototype_name||"") + " · " + (item.profession_name||"") + " · " + (item.value_name||"");
+    }
+  } else if(item.type === "round"){
+    div.className = "log-item round";
+    div.textContent = "📌 " + (item.message||"");
+  } else if(item.type === "system" && (item.message||"").indexOf("干预") >= 0){
+    div.className = "log-item intervention";
+    div.textContent = "🧠 " + (item.message||"");
+  } else {
+    div.className = "log-item system";
+    div.textContent = (item.message||"");
+  }
+  if(opts.append) area.appendChild(div);
+  else area.appendChild(div);
+  if(opts.scroll !== false) area.scrollTop = area.scrollHeight;
+}
+
+// 重放落盘的历史讨论记录（刷新/换设备/服务重启后都能看到全过程）
+function replayLogs(logs){
+  var area = document.getElementById("logArea");
+  if(!area || !logs || !logs.length) return false;
+  area.innerHTML = '<div class="log-item system" style="color:var(--dim);">📂 以下是从本地存档重放的**完整讨论记录**（'
+    + logs.length + ' 条）——刷新或重启都不会丢。</div>';
+  logs.forEach(function(it){ renderLogItem(it, {scroll:false}); });
+  area.scrollTop = 0;
+  return true;
+}
+
+function connectStream(sid){
+  if(eventSource) eventSource.close();
+  eventSource = new EventSource(API + "/api/sandbox/stream?session_id=" + encodeURIComponent(sid) + "&key=" + ACCESS_KEY);
+  eventSource.onmessage = function(ev){
+    try{
+      var item = JSON.parse(ev.data);
+      var area = document.getElementById("logArea");
+      if(item.type === "done"){
+        area.innerHTML += '<div class="log-item system">✅ 讨论完成，正在生成决策报告...</div>';
+        eventSource.close();
+        setTimeout(loadResult, 1500);
+        return;
+      }
+      renderLogItem(item);
+    }catch(e){}
+  };
+  // SSE 出错就关掉，绝不自动重连。
+  // 事故（2026-10-11 03:50）：会话已结束时服务端返回空流 → 浏览器 EventSource 每 3 秒
+  // 自动重连、无限刷请求。服务端已加 retry:1小时 兜底（对已打开页面也生效），
+  // 这里再补一道客户端防线。
+  eventSource.onerror = function(){
+    try{ eventSource.close(); }catch(e){}
+  };
+}
+
+// 加载结果
+function loadResult(){
+  if(!currentSession) return;
+  apiFetch(API + "/api/sandbox/result/" + currentSession).then(function(r){return r.json();}).then(function(d){
+    if(d.status !== "done"){ setTimeout(loadResult, 3000); return; }
+    // ---- V16.1：报告 done ≠ 全部算完 ----
+    // 评审 v6 是**独立线程**跑的，实测**报告出完后还要约 157 秒**才回来（锚点自检 12 次调用
+    // + 三模型分维，且 check_anchors 是串行的）。
+    // 原先这里一旦 done 就**停止轮询** → v6 永远轮不到 → 用户看到"没有 v6"，
+    // 再手动刷新又因为会话号没存而整页消失（2026-10-11 用户实测反馈）。
+    // 现在：done 之后若还没拿到 v6，继续轮询（最长约 5 分钟），并在页面上明确显示"计算中"。
+    if(!d.v6_review){
+      v6WaitTries = (v6WaitTries || 0) + 1;
+      if(v6WaitTries <= 100){                       // 100 × 3s ≈ 5 分钟
+        var _rb = document.getElementById("resultBox");
+        if(_rb && !_rb.innerHTML){
+          _rb.innerHTML = '<div style="padding:14px;background:var(--card2);border-radius:10px;font-size:13px;">' +
+            '⏳ 讨论已结束。<b>评审 v6 正在计算</b>（独立三家评委 + 锚点自检，约 2–3 分钟）：' +
+            '<span style="color:var(--dim);">已等待 ' + (v6WaitTries*3) + ' 秒…</span>' +
+            '<div style="font-size:11.5px;color:var(--dim);margin-top:6px;">这一页会自动刷新出结果，无需手动刷新。</div></div>';
+        }
+        setTimeout(loadResult, 3000); return;
+      }
+    }
+    var box = document.getElementById("resultBox");
+    var html = "";
+    // 定位声明（2026-10-19）：产品只做「决策预演」，不做「研究报告」。
+    // 讨论里有文献/有结构/有结论，很容易被读成研究分析 —— 必须放在最上方显式说清。
+    if(d.positioning && d.positioning.title){
+      var _p = d.positioning;
+      html += '<div class="pos-box">'
+        + '<div class="pt">🎯 ' + esc(_p.title) + '</div>'
+        + (_p.what_it_is ? '<div class="pi"><b>它是什么：</b>' + esc(_p.what_it_is) + '</div>' : '')
+        + (_p.what_it_is_not ? '<div class="pi"><b>它不是什么：</b>' + esc(_p.what_it_is_not) + '</div>' : '')
+        + (_p.how_to_use ? '<div class="pi"><b>怎么用：</b>' + esc(_p.how_to_use) + '</div>' : '')
+        + '</div>';
+    }
+    // V16.1：若这份结果是**服务端从磁盘读回的历史记录**，明确告知用户
+    //（刷新能看到、但服务已重启过；不说明的话用户会以为"这是刚跑的"）
+    if(d.restored_from_disk){
+      html += '<div style="margin-bottom:10px;padding:9px 12px;background:#EFF6FF;border-left:3px solid var(--primary);border-radius:0 8px 8px 0;font-size:12.5px;">' +
+        '📂 <b>这是历史记录</b>（服务重启后从本地存档读回' + (d.saved_at ? '，保存于 ' + esc(d.saved_at) : '') + '）。' +
+        '<span style="color:var(--dim);">内容完整可查；重新发起一次预演请用上方「发起预演」。</span></div>';
+    }
+    // 复杂度分级
+    html += '<div style="font-size:13px;color:var(--dim);margin-bottom:8px;">课题复杂度：<b style="color:var(--warn);">' + esc(d.complexity_level||"中等") + '</b></div>';
+    // 人话化报告
+    if(d.human_report){
+      html += renderHumanReport(d.human_report);
+    }
+    // ---- V15 优化（2026-09-25）：主教练干预时间线（本局内逐轮决策）----
+    var ivs = d.interventions || [], sigs = d.round_signals || [];
+    if(ivs.length || sigs.length || d.intervention_timing){
+      html += '<div style="margin-bottom:12px;padding:12px 14px;background:var(--card2);border-radius:10px;border-left:4px solid var(--warn);">'
+        + '<div style="font-size:13px;font-weight:700;color:var(--warn);">🧠 主教练干预时间线'
+        + '<span style="font-weight:400;font-size:11px;color:var(--dim);">　本局内逐轮决策，共 ' + ivs.length + ' 次（时机：' + esc(d.intervention_timing || "per_round") + '）</span></div>';
+      if(!ivs.length){
+        html += '<div style="font-size:12px;color:var(--dim);margin-top:6px;line-height:1.7;">本局未触发干预（客观信号未达阈值）。'
+          + '<b>不干预本身也是可报告的结果</b>——旧机制下干预会在第 2 轮无条件注入。</div>';
+      }else{
+        ivs.forEach(function(v){
+          html += '<div style="margin-top:8px;padding:9px 11px;background:var(--card);border-radius:8px;">'
+            + '<div style="font-size:12.5px;font-weight:700;">第 ' + esc(v.round) + ' 轮 · ' + esc(v.action) + '</div>'
+            + '<div style="font-size:12px;color:var(--dim);line-height:1.75;margin-top:3px;">'
+            + '<b>触发依据：</b>' + esc(v.trigger || "-") + '<br>'
+            + '<b>讨论原文：</b>' + esc(v.evidence || "-") + '<br>'
+            + '<b>作用对象：</b>' + esc((v.target || []).join("、") || "全体") + '</div></div>';
+        });
+      }
+      if(sigs.length){
+        html += '<details style="margin-top:9px;"><summary style="font-size:12px;color:var(--primary);cursor:pointer;font-weight:600;">📈 每轮客观信号（本地计算，可复现）</summary>'
+          + '<div style="margin-top:6px;overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">'
+          + '<thead><tr>' + ['轮次','观点重复率','跑题度','张力','未补证断言','引用编号','触发的信号']
+              .map(function(h){return '<th style="text-align:left;padding:5px 6px;border-bottom:1px solid var(--border);color:var(--dim);font-weight:600;">' + h + '</th>';}).join("")
+          + '</tr></thead><tbody>';
+        sigs.forEach(function(s){
+          var trig = (s.triggers || []).join("、") || "无";
+          html += '<tr>'
+            + '<td style="padding:5px 6px;border-bottom:1px dashed var(--border);">第' + esc(s.round) + '轮</td>'
+            + '<td style="padding:5px 6px;border-bottom:1px dashed var(--border);">' + esc(s.repeat_rate) + '</td>'
+            + '<td style="padding:5px 6px;border-bottom:1px dashed var(--border);">' + esc(s.off_topic) + '</td>'
+            + '<td style="padding:5px 6px;border-bottom:1px dashed var(--border);">' + esc(s.tension) + '</td>'
+            + '<td style="padding:5px 6px;border-bottom:1px dashed var(--border);">' + esc(s.unsupported_claims) + '</td>'
+            + '<td style="padding:5px 6px;border-bottom:1px dashed var(--border);">' + esc(s.cited_count) + '</td>'
+            + '<td style="padding:5px 6px;border-bottom:1px dashed var(--border);color:' + ((s.triggers||[]).length ? 'var(--warn)' : 'var(--dim)') + ';">' + esc(trig) + '</td>'
+            + '</tr>';
+        });
+        html += '</tbody></table></div>'
+          + '<div style="font-size:11.5px;color:var(--dim);margin-top:6px;">信号全部在本地按固定阈值计算（重复率≥0.55、跑题度≥0.65、张力≤0.15、未补证≥3 条、本轮无引用），不调用模型判断"要不要干预"。</div>'
+          + '</details>';
+      }
+      html += '</div>';
+    }
+    // ================================================================
+    // 评审 v6（**主读数**，2026-10-11 起取代 1–10 分那把尺子）
+    // 依据：你自己的实验报告 01_v6实验结果_人话版.md §七 —— v3 的 1–10 分在同一批 18 对上
+    //       只挑对 8/18 = 44%，**低于瞎猜**；归因是"**尺子没有刻度**"（分数全挤在 6.4–7.2，
+    //       跨度 0.8 分，而"判定有差别"的门槛是 0.5 分）。v6 改成成对强制选择，
+    //       三家 18/17/17 全达标、两轮一致。
+    // 展示纪律（v6 预注册）：**锚点未过就一个分数都不给**；每条判断必须带原文证据。
+    // ================================================================
+    var v6 = d.v6_review;
+    // V16.2：**插件层的失败要显眼**。
+    // 用户选了一个不可用的评审器、或评审器跑挂了 —— 都必须在结果页顶部说清楚，
+    // 否则用户只会看到"没有读数"，不知道是没选、不可用、还是跑挂了（三者长得一样）。
+    if(d.review_error){
+      html += '<div style="margin:12px 0 6px;padding:10px 12px;background:#FEF2F2;border-left:3px solid #DC2626;border-radius:0 8px 8px 0;font-size:12.5px;">' +
+        '<b style="color:#DC2626;">⚠️ 评审未产出读数</b><br>' + esc(String(d.review_error)) + '</div>';
+    }
+    // V16.2：**评委齐不齐** —— 三家独立家族是 v6 防止同源自评的立身之本，少一家等于设计没成立。
+    // 实测事故：某局 glm 在分维诊断缺席，界面上只是评委列少一个名字，极易被忽略。
+    if(v6 && v6.reviewer_status && v6.reviewer_status.complete === false){
+      var _rs = v6.reviewer_status;
+      html += '<div style="margin:12px 0 6px;padding:10px 12px;background:#FFFBEB;border-left:3px solid #D97706;border-radius:0 8px 8px 0;font-size:12.5px;">' +
+        '<b style="color:#D97706;">⚠️ 评委不齐：应到 ' + esc(_rs.n_expected) + " 家，实到 " + esc(_rs.n_contributed) + ' 家</b>' +
+        '<br>缺席：<b>' + esc((_rs.missing_dims||[]).join("、")) + '</b>（' + esc((_rs.expected||[]).join("、")) + '）' +
+        '<div style="color:var(--dim);margin-top:4px;line-height:1.6;">' +
+        '三档取自「多家评委的众数」，**评委数减少会让众数更容易被单个模型带偏**。' +
+        '本次读数**仍可用**，但请把它当作"评委不全"的结果看待——具体缺席原因见下方「不可用」一行。</div></div>';
+    }
+    if(v6){
+      html += '<div class="v6-wrap"><div class="v6-head"><div class="t">🧪 评审 v6'
+        + '<span class="s">独立三家 · 成对判定 · 分维三档</span></div></div><div class="v6-body">';
+      // 锚点自检 —— 这是"尺子本身先体检"的结果，必须先展示
+      var ap = v6.anchors_passed;
+      if(ap === true){
+        html += '<div class="v6-anchor ok"><div class="ic">✅</div><div class="tx">'
+          + '<b style="color:#059669;">锚点自检通过</b><br>'
+          + '<span style="color:#4B5563;">评审器先做了「尺子体检」——完整报告应胜过删掉六成的同一份；'
+          + '同一份应判无差别。通过后才出下面的读数。</span></div></div>';
+      } else if(ap === false){
+        html += '<div class="v6-anchor bad"><div class="ic">❌</div><div class="tx">'
+          + '<b style="color:#DC2626;">锚点自检未通过 → 本次不展示任何分数</b><br>'
+          + '<span style="color:#4B5563;">评审器没通过体检，按规则不出读数。</span></div></div>';
+      } else {
+        html += '<div class="v6-anchor warn"><div class="ic">⚠️</div><div class="tx">'
+          + '<b style="color:#D97706;">锚点自检未能运行 → 本次不展示任何分数</b><br>'
+          + '<span style="color:#4B5563;">通常是锚点材料缺失或模型不可用。修复办法：检查评审模型 Key 与锚点素材是否就位。</span></div></div>';
+      }
+      if(v6.errors && v6.errors.length){
+        html += '<div style="margin-bottom:8px;font-size:11.5px;color:var(--dim);line-height:1.6;">' +
+          v6.errors.map(function(e){ return '· ' + esc(String(e)); }).join('<br>') + '</div>';
+      }
+      // 分维：**三档，不求和**（v6 原则②：不许拿总分当门面）
+      var dims = v6.dimensions || {};
+      var dimKeys = Object.keys(dims);
+      if(!v6.scores_hidden && dimKeys.length){
+        var LV = {"强":"#059669","中":"#D97706","弱":"#DC2626","无依据":"#6B7280"};
+        html += '<div style="margin-bottom:8px;">';
+        dimKeys.forEach(function(k){
+          var v = dims[k] || {}, lv = v.level || "无依据";
+          // V16.3 修复：**必须显示维度名**。
+          // 用户原话：「这个强中弱，是什么强，实用性嘛，还是啥」
+          // —— 后端一直返回着 name（"是否答到课题核心"等），但前端只渲染了编号 ①②③，
+          //    于是读者看到"① 强"完全不知道在说什么，档位等于没有意义。
+          var _dn = v.name || "";
+          var _lvBg = {"强":"#D1FAE5","中":"#FEF3C7","弱":"#FEE2E2","无依据":"#E5E7EB"}[lv] || "#E5E7EB";
+          html += '<div class="v6-dim"><div class="top">'
+            + '<span class="nm">' + esc(k) + (esc(_dn) ? '　' + esc(_dn) : '') + '</span>'
+            + '<span class="lv" style="color:' + (LV[lv] || '#6B7280') + ';background:' + _lvBg + ';">' + esc(lv) + '</span>'
+            + (v.votes ? '<span class="v6-note">' + esc(String(v.votes)) + '</span>' : '')
+            + '</div>'
+            + (v.why ? '<div class="why">' + esc(v.why) + '</div>' : '')
+            + (v.quote ? '<div class="ev"><span class="k">原文</span>　' + esc(v.quote) + '</div>' : '')
+            + '</div>';
+        });
+        html += '</div>';
+        html += '<div style="font-size:11.5px;color:var(--dim);margin-bottom:6px;">↑ 三档取自三家评委的<b>众数</b>，不做加权求和 —— 避免「总分好看但每一维都平庸」。</div>' +
+          '<div class="v6-note" style="margin-bottom:10px;">评分纪律：锚点未过 → 一个分数都不给；每条判断必须带原文证据。</div>';
+        // V16.2：**把档位标准摆出来**。用户原话：「然后就是什么强，你没有表明」
+        // —— 只显示"强"而不给标准，读者无法复核，档位就退化成了主观标签。
+        // 标准与后端 prompt 用的是同一份（后端随结果返回 tier_rubric），不是前端另写一套。
+        var _rb = v6.tier_rubric;
+        if(_rb){
+          html += '<details style="margin-bottom:10px;background:var(--card2);border-radius:8px;padding:9px 12px;">' +
+            '<summary style="font-size:12px;color:var(--primary);cursor:pointer;font-weight:600;">📏 三档是怎么判的？（点开看标准）</summary>' +
+            '<div style="margin-top:8px;font-size:12px;line-height:1.8;">';
+          ["强","中","弱","无依据"].forEach(function(k){
+            if(!_rb[k]) return;
+            var c = {"强":"#059669","中":"#D97706","弱":"#DC2626","无依据":"#6B7280"}[k];
+            html += '<div style="margin-bottom:5px;"><b style="color:' + c + ';">' + esc(k) + '</b>＝' + esc(_rb[k]) + '</div>';
+          });
+          html += '<div style="color:var(--dim);margin-top:6px;">※ 程序还会做一道校验：'
+               + '<b>判为强/中/弱但引不出原文的，一律降为「无依据」</b>'
+               + '—— 档位若可以不带证据，它就退化成了一个主观标签，那正是我们把 1–10 分换掉的原因。</div>';
+          html += '</div></details>';
+        }
+        if(v6.today){
+          html += '<div style="font-size:11.5px;color:var(--dim);margin-bottom:10px;">评审基准日期：' + esc(v6.today)
+               + '（评委按此判断年份是否可疑——不告知日期会让它们把当前年份误报成"未来"）</div>';
+        }
+      }
+      // 风险栏
+      var risks = (v6.risk && v6.risk.items) || [];
+      if(!v6.scores_hidden && risks.length){
+        html += '<details open style="margin-bottom:10px;background:var(--card2);border-radius:8px;padding:10px 12px;">' +
+          '<summary style="font-size:12.5px;color:#DC2626;cursor:pointer;font-weight:700;">⚠️ 风险栏（' + risks.length + ' 条 · 每条带原文证据）</summary><div style="margin-top:8px;">';
+        risks.forEach(function(r, i){
+          html += '<div style="padding:8px 0;border-bottom:1px dashed var(--border);">' +
+            '<div style="font-size:12.5px;line-height:1.7;"><b>' + (i+1) + '.</b> ' + esc(r.risk || '') + '</div>' +
+            (r.if_happens ? '<div style="font-size:11.5px;color:#DC2626;line-height:1.6;margin-top:3px;">↳ 会发生什么：' + esc(r.if_happens) + '</div>' : '') +
+            (r.evidence ? '<div style="font-size:11.5px;color:var(--dim);line-height:1.6;margin-top:3px;">原文：' + esc(r.evidence) + '</div>' : '') +
+            '</div>';
+        });
+        html += '</div></details>';
+      }
+      // 成对判定（有基线时才是主读数）
+      if(v6.pairwise){
+        var pw = v6.pairwise;
+        html += '<div style="margin-bottom:8px;padding:9px 11px;background:var(--card2);border-radius:8px;font-size:12.5px;">' +
+          '<b>成对强制选择（相对基线）</b>：' + esc(pw.verdict || '') +
+          ' ｜ <span style="color:var(--dim);">胜 ' + (pw.win||0) + ' / 平 ' + (pw.tie||0) + ' / 负 ' + (pw.loss||0) + '（' + (pw.n||0) + ' 家投票）</span></div>';
+      } else if(v6.pairwise_skipped){
+        html += '<div style="margin-bottom:8px;font-size:11.5px;color:var(--dim);">· ' + esc(v6.pairwise_skipped.reason || '') + '</div>';
+      }
+      // 评委可用性（**不回落**：不可用就如实列出来）
+      var un = v6.unavailable || [];
+      html += '<div style="font-size:11.5px;color:var(--dim);line-height:1.6;margin-bottom:10px;">' +
+        '评委：' + esc((v6.models_used || []).join('、') || '（无）') +
+        (un.length ? '<br>⚠️ 不可用：' + esc(un.map(function(u){ return u.model + '（' + u.stage + '）'; }).join('、')) : '') +
+        (v6.same_family_warning ? '<br>⚠️ 评审与生成同源，分数仅供参考' : '') + '</div>';
+      html += '</div></div>';   // 关闭 .v6-body / .v6-wrap（2026-10-18 视觉升级）
+    } else {
+      html += '<div style="margin:14px 0 6px;font-size:13px;color:var(--dim);">🧪 评审 v6：本次未生成（约需 2–3 分钟，稍后刷新可看）</div>';
+    }
+    // ----------------------------------------------------------------
+    // 旧尺子 v3（1–10 分）——**已下线**，仅作留档折叠展示
+    // 为什么保留：① 它有回归测试守着，不能删端点；② 历史会话的可复现性需要它。
+    // 为什么折叠：它已被证明"没有刻度"（同一批 18 对只挑对 8/18，低于瞎猜），
+    //            继续把 1–10 分摆在最显眼处会误导读者。
+    // ----------------------------------------------------------------
+    var vr = d.v3_review || {};
+    if(vr["综合评分"]){
+      html += '<details style="margin-bottom:10px;background:var(--card2);border-radius:8px;padding:10px 12px;">' +
+        '<summary style="font-size:12.5px;color:var(--dim);cursor:pointer;font-weight:600;">🗄️ 旧尺子留档：v3 五维 1–10 分（**已下线**，仅存档）</summary>' +
+        '<div style="margin-top:8px;font-size:11.5px;color:var(--dim);line-height:1.7;">' +
+        '这套分数已被实验证伪：同一批 18 对上只挑对 8/18（44%），低于瞎猜。归因是<b>尺子没有刻度</b>——' +
+        '所有报告分数挤在 6.4–7.2、跨度仅 0.8 分，而"判定有差别"的门槛是 0.5 分。' +
+        '主读数请以上方 <b>评审 v6</b> 为准。<br><br>' +
+        '综合评分：<b>' + esc(vr["综合评分"]) + '</b>（旧口径，勿用于结论）</div>';
+      // 原文依据仍然可查（这是 v3 里唯一有价值的部分，保留可核查性）
+      html += '<details style="margin-top:8px;"><summary style="font-size:11.5px;color:var(--dim);cursor:pointer;">查看旧五维分数与原文依据</summary><div style="margin-top:6px;">';
+      ["深度","广度","涌现度","实用性","分歧质量"].forEach(function(k){
+        var s = (vr.scores || {})[k];
+        if(!s) return;
+        html += '<div style="padding:6px 0;border-bottom:1px dashed var(--border);">' +
+          '<div style="font-size:12px;font-weight:700;">' + esc(k) + ' <span style="color:var(--dim);">' + esc(s.score) + ' 分</span>' +
+          '<span style="font-size:11px;color:var(--dim);font-weight:400;"> ｜ 置信度 ' + esc(s.confidence || '-') + '/10 ｜ ' + esc(s.role || '') + '</span></div>' +
+          '<div style="font-size:11.5px;color:var(--dim);line-height:1.65;margin-top:3px;">' + esc(s.evidence || '（未提供）') + '</div></div>';
+      });
+      html += '</div></details>';
+      // 审计五维 + 方法论四维（同为 1–10 旧口径，一并留档；**不再作为主读数展示**）
+      var au = vr.audit_scores || {}, me = vr.methodology_scores || {};
+      var auKeys = Object.keys(au), meKeys = Object.keys(me);
+      if(auKeys.length || meKeys.length){
+        html += '<details style="margin-top:8px;"><summary style="font-size:11.5px;color:var(--dim);cursor:pointer;">查看旧「内容可靠性 / 方法论审计」分数（同为 1–10 旧口径）</summary><div style="margin-top:6px;">';
+        if(auKeys.length){
+          html += '<div style="font-size:11.5px;font-weight:700;margin-bottom:4px;">内容可靠性五维</div>';
+          auKeys.forEach(function(k){
+            var s = au[k];
+            html += '<div style="font-size:11.5px;color:var(--dim);line-height:1.7;">· ' + esc(k) + '：<b style="color:var(--text);">' + esc(s.score) + '</b>（置信度' + esc(s.confidence || '-') + '）' + (s.evidence ? ' — ' + esc(String(s.evidence).slice(0, 90)) : '') + '</div>';
+          });
+        }
+        if(meKeys.length){
+          html += '<div style="font-size:11.5px;font-weight:700;margin:8px 0 4px;">方法论审计</div>';
+          meKeys.forEach(function(k){
+            var s = me[k];
+            html += '<div style="font-size:11.5px;color:var(--dim);line-height:1.7;">· ' + esc(k) + '：<b style="color:var(--text);">' + esc(s.score) + '</b>' + (s.evidence ? ' — ' + esc(String(s.evidence).slice(0, 90)) : '') + '</div>';
+          });
+        }
+        html += '</div></details>';
+      }
+      html += '</details>';
+    }
+    // 原始报告
+    if(d.report){
+      // V15 优化（2026-09-25）：报告正文末尾的 Markdown 参考文献表由代码追加，
+      // 前端已用结构化表格单独渲染（见下方「引用核验 + 参考文献」），
+      // 这里截断，避免同一份文献清单以纯文本形式重复出现、并把超长 URL 撑破容器。
+      var repText = String(d.report);
+      var cut = repText.indexOf("### 参考文献");
+      var hadRefBlock = cut >= 0;
+      if (hadRefBlock) repText = repText.slice(0, cut).replace(/\s+$/, "");
+      // 2026-10-22：原始讨论记录默认折叠 —— 主内容是上面的预演结论，
+      // 6969 字的原始报告直接铺开会让整页显得「散」。收起但保留可展开（透明度不丢）。
+      html += '<details class="md-wrap" style="margin-top:4px;">'
+        + '<summary style="cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;'
+        + 'padding:11px 14px;background:var(--card2);border:1px solid var(--border);border-radius:10px;'
+        + 'font-size:12.5px;color:var(--dim);user-select:none;">'
+        + '<span>📄 <b style="color:var(--text);">完整讨论记录</b>'
+        + '<span style="font-size:11.5px;">　' + esc(String(repText.length)) + ' 字 · '
+        + '6 个角色的原始发言与分歧，点开可查看</span></span>'
+        + '<span style="margin-left:auto;font-size:11.5px;">展开 ▾</span>'
+        + '</summary>'
+        + '<div class="md-head" style="margin-top:10px;">'
+        + '<div class="t">📄 完整讨论报告<span style="font-weight:400;font-size:11.5px;color:var(--dim);">'
+        + esc(repText.length + ' 字') + '</span></div>'
+        + '<button class="b" type="button" onclick="mdCopy(this)">复制全文</button></div>'
+        + '<div class="md-body" id="mdBody">' + renderMarkdown(repText) + '</div>'
+        + (hadRefBlock ? '<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:11.5px;color:var(--dim);">📚 参考文献见下方「引用核验」表格（由系统生成，未经模型改写）</div>' : '')
+        + '</details>';
+    }
+    // ---- V15 优化（2026-09-25）：引用核验 + 参考文献（由代码生成，非模型生成）----
+    var cc = d.citation_check || null, refs = d.references || [];
+    if(cc || refs.length){
+      var bColor = "#059669", bText = (cc && cc.verdict) ? cc.verdict : "引用已核验";
+      if(cc && cc.phantom_count > 0){ bColor = "#DC2626"; bText = "⚠️ 检出引用了不存在的编号（疑似编造）"; }
+      else if(cc && cc.unsupported_count > 0){ bColor = "#D97706"; bText = "有 " + cc.unsupported_count + " 处含数字/年份的断言未标注出处"; }
+      html += '<div style="margin-top:12px;padding:12px 14px;background:var(--card2);border-radius:10px;border-left:4px solid ' + bColor + ';">'
+        + '<div style="font-size:13px;font-weight:700;color:' + bColor + ';">🔗 引用核验：' + esc(bText) + '</div>';
+      if(cc){
+        html += '<div style="font-size:12px;color:var(--dim);margin-top:6px;line-height:1.8;">'
+          + '有出处 <b style="color:var(--text);">' + esc(cc.cited_count || 0) + '</b> 处　｜　'
+          + '引用了不存在的编号 <b style="color:' + ((cc.phantom_count || 0) > 0 ? '#DC2626' : 'var(--text)') + ';">' + esc(cc.phantom_count || 0) + '</b> 处　｜　'
+          + '未标注出处的断言 <b style="color:var(--text);">' + esc(cc.unsupported_count || 0) + '</b> 处　｜　'
+          + '信息池 ' + esc(cc.pool_size || 0) + ' 篇</div>';
+        if((cc.phantom || []).length){
+          html += '<div style="font-size:12px;color:#DC2626;margin-top:5px;line-height:1.7;">⚠️ 报告中出现了信息池里不存在的编号：'
+            + esc(cc.phantom.join("、")) + '。系统判定为疑似编造引用，请以下方参考文献表为准。</div>';
+        }
+        if((cc.unsourced_numbers || []).length){
+          html += '<details open style="margin-top:6px;"><summary style="font-size:12px;color:#DC2626;cursor:pointer;font-weight:600;">⚠️ 无出处数字（疑似幻觉，' + cc.unsourced_numbers.length + ' 处）</summary>'
+            + '<div style="margin-top:4px;font-size:12px;color:var(--dim);line-height:1.75;">'
+            + '以下句子含具体数字并声称有外部依据，但在本轮信息池中<b style="color:#DC2626;">查无实据</b>，请勿直接采信：<br>'
+            + (cc.unsourced_numbers || []).map(function(x){ return '· ' + esc(x); }).join('<br>') + '</div></details>';
+        }
+        if((cc.unsupported || []).length){
+          html += '<details style="margin-top:6px;"><summary style="font-size:12px;color:var(--dim);cursor:pointer;">查看未标注出处的断言（' + cc.unsupported.length + ' 条）</summary>'
+            + '<div style="margin-top:4px;font-size:12px;color:var(--dim);line-height:1.75;">'
+            + (cc.unsupported || []).map(function(x){ return '· ' + esc(x); }).join('<br>') + '</div></details>';
+        }
+      }
+      if(cc){
+        var ss = (d.v15_meta && d.v15_meta.search && d.v15_meta.search.source_status) || null;
+        if(ss && Object.keys(ss).length){
+          var parts = [];
+          Object.keys(ss).forEach(function(k){
+            var v = ss[k] || {}, n = v.count || 0;
+            var tag = n > 0 ? ('✅ ' + n + ' 条') : (v.error ? ('⚠️ ' + String(v.error).slice(0, 26)) : '— 无结果');
+            parts.push('<span style="white-space:nowrap;">' + esc(k) + '：' + esc(tag) + '</span>');
+          });
+          html += '<div style="margin-top:6px;font-size:11.5px;color:var(--dim);line-height:1.9;">' +
+            '<b>检索来源台账</b>（区分"没有数据"与"被限速/超时"）：' + parts.join('　') + '</div>';
+        }
+        // B9（2026-10-10）：检索漏斗——把"检索→去重→三无→类型过滤→撤稿→注入"逐级计数摆出来。
+        // 开了网络资料白名单网时，这一段还会带上"网络源 N 条：放行 可信a/学术b，剔除 c"。
+        var fu = (d.v15_meta && d.v15_meta.search && d.v15_meta.search.funnel) || null;
+        if(fu && fu.funnel_text){
+          html += '<details style="margin-top:6px;"><summary style="font-size:11.5px;color:var(--dim);cursor:pointer;">'
+            + '🔎 检索漏斗（逐级计数，可回放）</summary>'
+            + '<div style="margin-top:5px;font-size:11.5px;color:var(--dim);line-height:1.9;overflow-wrap:anywhere;">'
+            + esc(fu.funnel_text) + '</div></details>';
+        }
+      }
+      if(refs.length){
+        // V15 修复（2026-10-09）：按来源性质拆成两块——
+        // 参考文献只收学术来源（期刊/会议/出版机构/DOI），网页新闻/自媒体单列，
+        // 避免"今日头条"这类内容被当成参考文献展示。
+        var acRefs = refs.filter(function(r){ return (r.kind || '') === 'academic'; });
+        var webRefs = refs.filter(function(r){ return (r.kind || '') !== 'academic'; });
+        if(acRefs.length){
+          html += '<details open style="margin-top:9px;"><summary style="font-size:12.5px;color:var(--primary);cursor:pointer;font-weight:600;">📚 参考文献（' + acRefs.length + ' 篇，学术来源）</summary>'
+            + '<div style="margin-top:8px;overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;">'
+            + '<thead><tr>' + ['编号','标题','作者','来源','级别','年份','被引','链接']
+                .map(function(h){return '<th style="text-align:left;padding:5px 6px;border-bottom:1px solid var(--border);color:var(--dim);font-weight:600;">' + h + '</th>';}).join("")
+            + '</tr></thead><tbody>';
+          acRefs.forEach(function(r){
+            // 级别：CSSCI / 北大核心 / CSSCI扩展 / 国际 Q1… —— 依据公开名录与 SJR 分区
+            var lv = r.journal_level || '';
+            if(!lv) lv = (r.journal_tier === 1 ? 'CSSCI' : r.journal_tier === 2 ? '北大核心' : r.journal_tier === 11 ? 'CSSCI扩展' : '—');
+            var lvColor = (lv.indexOf('CSSCI') === 0) ? '#059669' : (lv === '北大核心' ? '#2563EB' : (lv.indexOf('国际 Q1') === 0 || lv.indexOf('国际 Q2') === 0 ? '#7C3AED' : 'var(--dim)'));
+            html += '<tr>'
+              + '<td style="padding:5px 6px;border-bottom:1px dashed var(--border);color:var(--primary);font-weight:700;white-space:nowrap;">' + esc(r.ref_no || "-") + '</td>'
+              + '<td style="padding:5px 6px;border-bottom:1px dashed var(--border);overflow-wrap:anywhere;">' + esc(r.title || "-") + '</td>'
+              + '<td style="padding:5px 6px;border-bottom:1px dashed var(--border);color:var(--dim);overflow-wrap:anywhere;">' + esc(r.authors || "-") + '</td>'
+              + '<td style="padding:5px 6px;border-bottom:1px dashed var(--border);color:var(--dim);overflow-wrap:anywhere;">' + esc(r.journal || r.source || "-") + '</td>'
+              + '<td style="padding:5px 6px;border-bottom:1px dashed var(--border);font-weight:700;color:' + lvColor + ';white-space:nowrap;">' + esc(lv) + '</td>'
+              + '<td style="padding:5px 6px;border-bottom:1px dashed var(--border);color:var(--dim);white-space:nowrap;">' + esc(r.year || "-") + '</td>'
+              + '<td style="padding:5px 6px;border-bottom:1px dashed var(--border);color:var(--dim);">' + esc(r.cite || "-") + '</td>'
+              + '<td style="padding:5px 6px;border-bottom:1px dashed var(--border);">'
+              + (r.url ? '<a href="' + esc(r.url) + '" target="_blank" rel="noopener" style="color:var(--primary);">链接</a>' : '<span style="color:var(--dim);">—</span>') + '</td>'
+              + '</tr>';
+          });
+          html += '</tbody></table></div>'
+            + '<div style="font-size:11.5px;color:var(--dim);margin-top:7px;line-height:1.7;">本表由系统按主教练实际注入的信息池自动生成，<b>未经语言模型改写</b>，<b>仅收录可溯源到期刊/会议/出版机构或 DOI 的学术来源</b>。「级别」依据公开名录判定：<b>CSSCI 来源期刊目录（2025-2026）</b>、<b>《中文核心期刊要目总览》（2023 年版）</b>、<b>SJR 2025 分区（Scimago）</b>。报告正文中的 [P1] 等编号即指向本表。</div>'
+            + '</details>';
+        }
+        if(webRefs.length){
+          // B9（2026-10-10）：网络资料只有在开了白名单网（QUNZHI_ALLOW_WEB=1）时才会出现，
+          // 因此这里加一列「可信度」把判定来源（可信来源/学术来源）摆出来——你能看到
+          // 进池的每一条网络资料为什么被放行。未开网时该列为空，与旧界面一致。
+          var hasTier = webRefs.some(function(r){ return !!r.source_tier_label; });
+          html += '<details style="margin-top:8px;"><summary style="font-size:12.5px;color:var(--warn);cursor:pointer;font-weight:600;">🌐 网络资料（' + webRefs.length + ' 条，非学术来源）</summary>'
+            + '<div style="margin-top:8px;overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;">'
+            + '<thead><tr>' + (hasTier ? ['编号','标题','来源站点','可信度','链接'] : ['编号','标题','来源站点','链接'])
+                .map(function(h){return '<th style="text-align:left;padding:5px 6px;border-bottom:1px solid var(--border);color:var(--dim);font-weight:600;">' + h + '</th>';}).join("")
+            + '</tr></thead><tbody>';
+          webRefs.forEach(function(r){
+            var host = ''; try { host = new URL(r.url || '').hostname; } catch(e) { host = '-'; }
+            var tier = r.source_tier_label || '';
+            var tierColor = (tier.indexOf('可信') === 0) ? '#059669' : (tier.indexOf('学术') === 0 ? '#2563EB' : 'var(--dim)');
+            html += '<tr>'
+              + '<td style="padding:5px 6px;border-bottom:1px dashed var(--border);color:var(--warn);font-weight:700;white-space:nowrap;">' + esc(r.ref_no || "-") + '</td>'
+              + '<td style="padding:5px 6px;border-bottom:1px dashed var(--border);overflow-wrap:anywhere;">' + esc(r.title || "-") + '</td>'
+              + '<td style="padding:5px 6px;border-bottom:1px dashed var(--border);color:var(--dim);overflow-wrap:anywhere;">' + esc(host) + '</td>'
+              + (hasTier ? ('<td style="padding:5px 6px;border-bottom:1px dashed var(--border);font-weight:700;color:' + tierColor + ';white-space:nowrap;" title="' + esc(r.source_tier_reason || '') + '">' + esc(tier || '—') + '</td>') : '')
+              + '<td style="padding:5px 6px;border-bottom:1px dashed var(--border);">'
+              + (r.url ? '<a href="' + esc(r.url) + '" target="_blank" rel="noopener" style="color:var(--primary);">链接</a>' : '<span style="color:var(--dim);">—</span>') + '</td>'
+              + '</tr>';
+          });
+          html += '</tbody></table></div>'
+            + '<div style="font-size:11.5px;color:var(--dim);margin-top:7px;line-height:1.7;">以下为检索到的<b>网页/新闻/自媒体</b>内容，仅作背景参考，<b>不作为文献依据</b>；正文若引用请写明「据网络报道」。'
+            + (hasTier ? '「可信度」由<b>规则白名单</b>判定（政府/国际组织/高校/权威媒体为"可信来源"，有 DOI 或学术域名为"学术来源"）；<b>白名单外的网络源已在注入前剔除</b>，剔除明细见上方「检索漏斗」。' : '')
+            + '</div>'
+            + '</details>';
+        }
+      } else if(refs.length === 0 && cc && cc.pool_size){
+        html += '<div style="font-size:12px;color:var(--dim);margin-top:6px;">本轮信息池无学术来源。</div>';
+      }
+      html += '</div>';
+    }
+    // 深批者视角（对抗性评审——AI 自己挑自己毛病）
+    if(d.deep_critic && d.deep_critic.length > 20){
+      html += '<div style="margin-top:14px;padding:14px 16px;background:#1F2937;border-radius:10px;font-size:13px;color:#E5E7EB;line-height:1.8;border-left:4px solid #EF4444;">' +
+        '<div style="font-weight:700;margin-bottom:8px;color:#FCA5A5;">🧐 深批者视角 <span style="font-weight:400;font-size:11px;color:#9CA3AF;">（对抗性评审：AI 建议的边界在哪？）</span></div>' +
+        '<div style="white-space:pre-wrap;">' + esc(d.deep_critic) + '</div></div>';
+    }
+    // 诚实声明（底部小字：AI 偏理想化，需人类判断）
+    html += '<div style="margin-top:12px;padding:10px 12px;background:#F5F0E8;border-radius:8px;font-size:11.5px;color:var(--dim);line-height:1.7;">' +
+      '⚠️ <b>诚实声明：</b>' + esc(d.honesty_note || "AI 团队讨论天然偏理想化——真实世界的预算约束、利益博弈、执行阻力，需要你在决策时自行补上。本报告仅供参考，不替代专业判断。") + '</div>';
+    // 用户反馈（比赛实证收集）
+    html += '<div class="card" style="margin-top:14px;"><h3><span class="ico">💬</span> 这个预演对你有帮助吗？</h3>' +
+      '<div style="font-size:26px;margin-bottom:10px;" id="starRow">' +
+      '⭐<span style="font-size:14px;color:var(--dim);margin-left:8px;">点击星星打分</span></div>' +
+      '<div style="display:flex;gap:4px;margin-bottom:10px;">' +
+      [1,2,3,4,5].map(function(n){ return '<span class="star" data-v="'+n+'" style="font-size:30px;cursor:pointer;color:#d1d5db;" onclick="pickStar('+n+')">★</span>'; }).join("") +
+      '</div>' +
+      '<textarea id="feedbackComment" placeholder="你的感受/建议（一句话就行）..." style="margin-bottom:10px;"></textarea>' +
+      '<button class="btn" onclick="submitFeedback(\'' + esc(d.topic||"") + '\')">📮 提交反馈</button>' +
+      '<div id="feedbackMsg" style="font-size:12px;color:var(--green);margin-top:8px;"></div></div>';
+    box.innerHTML = html;
+    document.querySelector('[data-view="result"]').click();
+  });
+}
+
+// ====================================================================
+// 启动时恢复上一局（V16.1 新增，2026-10-11）
+// 事故背景：用户"刷新过后全部消失了 / 我原有的报告也消失了，跟我们正常用的网页不一样"——
+// 会话号只存在内存变量 currentSession 里，一刷新就丢；而结果页内容完全依赖它。
+// 会话是**服务端本来就有的**（/api/sandbox/result/<sid>），没有任何理由让它随刷新消失。
+// 现在：① 会话号同时写 URL(?session=) 与 localStorage；② 页面加载时读回；
+//       ③ 恢复你上次停在的标签页；④ 若 v6 还在算，loadResult 会持续轮询并显示"计算中"。
+// ====================================================================
+(function restoreLastSession(){
+  try{
+    var sid = readSessionFromLocation();
+    var view = readViewFromLocation();
+    if(view && view !== "start"){
+      var nb = document.querySelector('[data-view="' + view + '"]');
+      if(nb) nb.click();
+    } else if(sid){
+      var rb = document.querySelector('[data-view="result"]');
+      if(rb) rb.click();                       // 有会话但没记标签页 → 默认回结果页
+    }
+    if(!sid) return;
+    currentSession = sid;
+    var lbl = document.getElementById("sessionLabel");
+    if(lbl) lbl.textContent = "（" + sid + "，已恢复上一局）";
+    var st = document.getElementById("startStatus");
+    if(st) st.innerHTML = "↩️ 已恢复你上一次的预演（" + sid + "）"
+      + "——链接已带上会话号，<b>可收藏、可分享</b>。如需重新发起，直接在上方填写课题即可。";
+    // 注意：loadResult() 结尾会**自动跳到结果页**，所以停在「讨论监控」时不能调它，
+    // 否则刷新后标签页会被抢走（那也是"跟正常网页不一样"的一种表现）。
+    if(view === "monitor"){
+      connectStream(sid);        // 重连实时日志流（讨论还在跑时能接着看）
+      loadResultSilently();      // 静默取一次状态：讨论已完成则重放历史记录，但不切页
+    } else {
+      loadResult();
+    }
+  }catch(e){ /* 恢复失败不影响正常使用 */ }
+})();
+
+// 静默取状态：不渲染结果页、不切换标签页。仅用于"停在监控页刷新"时判断讨论是否已完成。
+function loadResultSilently(){
+  if(!currentSession) return;
+  apiFetch(API + "/api/sandbox/result/" + currentSession)
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var area = document.getElementById("logArea");
+      if(!d || !area) return;
+      // V16.4：**把落盘的讨论记录重放出来**。
+      // 用户反馈「我的讨论记录怎么又不见了」——根因是日志只在 SSE 里画过，
+      // 刷新后没人重放（而 session.logs 一直存着）。这里补上重放。
+      if(d.logs && d.logs.length){
+        replayLogs(d.logs);
+        if(d.status === "done"){
+          area.innerHTML += '<div class="log-item system">✅ 本局讨论已完成 —— '
+            + '点上方「📊 决策报告」查看完整报告与评审读数。</div>';
+        }
+        return;
+      }
+      if(d.status === "done"){
+        area.innerHTML += '<div class="log-item system">✅ 本局讨论已完成 —— '
+          + '点上方「📊 决策报告」查看完整报告与评审读数。</div>';
+      }
+    }).catch(function(){});
+}
+
+var pickedRating = 0;
+function pickStar(n){
+  pickedRating = n;
+  document.querySelectorAll(".star").forEach(function(s){
+    s.style.color = parseInt(s.dataset.v) <= n ? "#F59E0B" : "#d1d5db";
+  });
+}
+function submitFeedback(topic){
+  var comment = document.getElementById("feedbackComment").value.trim();
+  if(!pickedRating){ document.getElementById("feedbackMsg").textContent = "请先点星星打分"; return; }
+  apiFetch(API + "/api/feedback", {method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({topic: topic, rating: pickedRating, comment: comment, session_id: currentSession||""})})
+  .then(function(r){return r.json();})
+  .then(function(d){
+    var msg = document.getElementById("feedbackMsg");
+    if(d.ok){
+      msg.textContent = "✅ 感谢反馈！已记录（当前平均 " + d.stats.avg_rating + " 分，共 " + d.stats.total + " 条）";
+    } else {
+      msg.textContent = "提交失败，但你的体验对我们很重要";
+    }
+  }).catch(function(){ document.getElementById("feedbackMsg").textContent = "网络错误，稍后再试"; });
+}
+</script>
+
+<script id="qz-intro-js">
+/* ====================================================================
+   群智 · 涌现 —— 开场 v4
+   ====================================================================
+   本轮改动来源：SM 审美总监六维评审（7.85/10，未过 8.0）给出的 6 条意见。
+   评审原话摘要：
+     · camera 6.5：「镜头只有自转速率和一次微弱推进，缺叙事性运镜」
+     · visual_contrast 7.5：「第二幕与第三幕形态几乎同一画面，肉眼差异度不足」
+     · narrative：「0.3 秒的临界停顿短于人眼建立悬置感所需时长，最贵的情绪点被吞掉」
+     · uniqueness 7.5：「关键边留白、用户文字化粒子两个钩子被主干动画压过去了」
+     · particle_quality 8.0：「缺少深度分层，球壳偏扁平；密集区易过曝成白团」
+     · motion_life 8.5：「所有粒子统一缓动/统一迟滞，容易读出机械感」
+
+   本版对应改法：
+     ① 临界停顿 0.3s → 0.9s，并做「剥离式压暗」：全网降到 35%、半径外扩 8%，
+        只留缺口两端与虚线满亮（形态差异肉眼可辨）
+     ② 镜头三目标：汇聚推 1.0→1.12；临界横移把缺口送到黄金分割线；脉冲后 ±6% 弹簧后坐
+     ③ 用户输入的字符化作 #FF7A45 异色粒子，飞到关键边两端——
+        **那根一直缺失的边，就是用户的问题**
+     ④ 粒子加 z 深度衰减 + 密集区 alpha 下限 + 30% 尺寸抖动
+     ⑤ 迟滞 0.12–0.32s、缓动在 quadratic/cubic 间插值、时长 ×0.85–1.2、15% 犹豫回摆
+   ==================================================================== */
+(function () {
+  "use strict";
+  var KEY_OFF = "qz_intro_off";
+  try { if (localStorage.getItem(KEY_OFF) === "1") return; } catch (e) {}
+
+  // ① 去掉橙红：改用「暖白偏暖」，与主色同族——橙红在蓝白基调里像故障，暖白不会
+  var ACCENT = [255, 235, 214];
+  var BLUE = [74, 140, 255];
+  var WARM = [255, 248, 240];
+
+  var AGENTS = [
+    { n: "理论家",       v: "命题不成立", k: "no",   d: "先定义「提效」怎么度量" },
+    { n: "社会学家",     v: "有人受益",   k: "warn", d: "扩招会改变团队里的权力结构" },
+    { n: "批评家",       v: "崩在默契",   k: "no",   d: "新人先稀释的是现有默契" },
+    { n: "实践者",       v: "算不过来",   k: "no",   d: "招聘加培养成本超过提效收益" },
+    { n: "审计员",       v: "数字站不住", k: "warn", d: "「20% 提效」没有基线" },
+    { n: "方法论审计员", v: "问题问错了", k: "info", d: "真问题不是扩招，是业务有没有增量" }
+  ];
+  var SAMPLES = [
+    "如何提升师范生课堂参与度？",
+    "该不该把实验室的成果先做成产品？",
+    "团队该扩招还是先提效？"
+  ];
+
+  /* ---------------- DOM ---------------- */
+  var ov = document.createElement("div");
+  ov.id = "qz-intro";
+  ov.innerHTML =
+    '<canvas id="qz-intro-cv"></canvas>' +
+    '<div id="qz-intro-vig"></div>' +
+    '<div id="qz-intro-fly"></div>' +
+    '<div id="qz-intro-s1">' +
+      '<div class="qz-brand"><span class="qz-logo">群</span><span class="qz-dots"><i></i><i></i><i></i><i></i><i></i><i></i></span>' +
+        '<span class="qz-brand-name">群智</span>' +
+        '<span class="qz-brand-en">QUNZHI · 决策预演</span></div>' +
+      '<div class="qz-h1">每一次决策，都值得先预演一次</div>' +
+      '<div class="qz-def">预演 = 6 个 AI 角色先把这件事吵一遍，你再看他们吵出了什么</div>' +
+            '<div class="qz-h2">你正在纠结什么决策？</div>' +
+      '<div class="qz-row"><input id="qz-in" type="text" maxlength="80" ' +
+        'placeholder="写下你的决策问题，例如：该不该先做产品？" autocomplete="off"></div>' +
+      '<div class="qz-samples" id="qz-samples"></div>' +
+      '<button id="qz-go" type="button">进入预演 →</button>' +
+      '<div class="qz-tip">按 Enter 也可以</div>' +
+      '<div class="qz-output"><span class="qz-otitle">预演后你会得到</span> <b>决策建议书</b> · <b>认知盲区</b> · <b>风险预警</b> · <b>证据出处</b></div>' +
+'<div class="qz-cred">' +
+      
+        '<span><b>11</b>个检索源并行检索</span>' +
+        '<span>结论附 <b>[Pk]</b> 证据编号</span>' +
+      '</div>' +
+    '</div>' +
+    '<div id="qz-intro-s2">' +
+      '<div class="qz-stage" id="qz-stage">同一件事，六个人会给出六个答案</div>' +
+      '<div class="qz-agents" id="qz-agents"></div>' +
+    '</div>' +
+    '<div id="qz-intro-s3">' +
+      '<div id="qz-title">群智</div>' +
+      '<div id="qz-sub">分歧不是噪声 —— 一致的意见通常最没用，分歧里藏着你看不见的变量</div>' +
+    '</div>' +
+    '<div id="qz-intro-s4">' +
+      '<button id="qz-enter" type="button">进入预演 →</button>' +
+      '<div class="qz-tip">你的问题已经带进去了</div>' +
+      '<div class="qz-s4-next">' +
+        '<div class="s4n"><i>1</i><b>检索</b><span>11 个检索源并行 · 约 5 秒</span></div>' +
+        '<div class="s4n"><i>2</i><b>研讨</b><span>6 个角色在信息不对称下多轮交锋</span></div>' +
+        '<div class="s4n"><i>3</i><b>出报告</b><span>决策建议 · 认知盲区 · 证据编号</span></div>' +
+      '</div>' +
+    '</div>' +
+    '<button id="qz-skip" type="button">跳过开场，直接输入 →</button>' +
+    '<button id="qz-never" type="button">以后不再显示</button>';
+  (document.body || document.documentElement).appendChild(ov);
+
+  var cv = document.getElementById("qz-intro-cv");
+  var ctx = cv.getContext("2d");
+  var W = 0, H = 0, DPR = 1, R = 0, CX = 0, CY = 0;
+  var mouse = { x: 0, y: 0, tx: 0, ty: 0 };
+
+  function show(id, on) {
+    var el = document.getElementById(id);
+    if (el) el.classList.toggle("qz-on", !!on);
+  }
+  show("qz-intro-s1", true);
+
+  /* ---------------- 几何：斐波那契球 + 近邻连边 + 关键边 ---------------- */
+  var pts = [], edges = [], keyEdge = -1, keyA = 0, keyB = 0;
+  (function build() {
+    var n = 118, ga = Math.PI * (3 - Math.sqrt(5));
+    for (var i = 0; i < n; i++) {
+      var y = 1 - (i / (n - 1)) * 2, rad = Math.sqrt(Math.max(0, 1 - y * y)), th = ga * i;
+      // ④ 半径 ±2.5% 抖动，避免"完美球壳"的塑料感
+      var jr = 1 + (Math.random() - 0.5) * 0.05;
+      pts.push({ x: Math.cos(th) * rad * jr, y: y * jr, z: Math.sin(th) * rad * jr });
+    }
+    var maxD = 0.62, cnt = new Array(n).fill(0);
+    for (var a = 0; a < n; a++) {
+      for (var b = a + 1; b < n; b++) {
+        if (cnt[a] >= 3 || cnt[b] >= 3) continue;
+        var dx = pts[a].x - pts[b].x, dy = pts[a].y - pts[b].y, dz = pts[a].z - pts[b].z;
+        if (dx * dx + dy * dy + dz * dz < maxD * maxD) { edges.push([a, b]); cnt[a]++; cnt[b]++; }
+      }
+    }
+    // 关键边：跨画面中心、最显眼的一条
+    var best = -1, bestScore = -1e9;
+    for (var e = 0; e < edges.length; e++) {
+      var A = pts[edges[e][0]], B = pts[edges[e][1]];
+      var span = Math.abs(A.x - B.x);
+      var front = -(A.z + B.z);
+      var middle = 1 - Math.abs((A.x + B.x) / 2);
+      var sc = span * 1.2 + front * 0.9 + middle * 0.8;
+      if (sc > bestScore) { bestScore = sc; best = e; }
+    }
+    keyEdge = best; keyA = edges[best][0]; keyB = edges[best][1];
+  })();
+
+  /* ---------------- 粒子 ---------------- */
+  var P = [], ACC = [];        // ACC = 用户问题的异色粒子
+  function mkP(p, spread) {
+    p.ti = Math.floor(Math.random() * pts.length);
+    var t = pts[p.ti];
+    p.tx = t.x; p.ty = t.y; p.tz = t.z;
+    var ang = Math.random() * Math.PI * 2, rr = (spread || 2.1) + Math.random() * 1.4;
+    p.sx = Math.cos(ang) * rr; p.sy = Math.sin(ang) * rr; p.sz = (Math.random() - 0.5) * 1.6;
+    // 贝塞尔控制点（垂直方向随机偏移）
+    var mx = (p.sx + p.tx) / 2, my = (p.sy + p.ty) / 2;
+    var nx = -(p.ty - p.sy), ny = (p.tx - p.sx);
+    var nl = Math.sqrt(nx * nx + ny * ny) || 1;
+    var bend = (Math.random() * 0.55 + 0.25) * (Math.random() < 0.5 ? -1 : 1);
+    p.cx = mx + (nx / nl) * bend;
+    p.cy = my + (ny / nl) * bend;
+    p.fx = (Math.random() - 0.5) * 2.6;
+    p.fy = (Math.random() - 0.5) * 2.6;
+    p.fz = (Math.random() - 0.5) * 1.4;
+    p.ph = Math.random() * 6.2832;
+    p.warm = Math.random() < 0.42;
+    p.r = 0.7 + Math.random() * 1.5;
+    p.flash = 0;
+    // ④ 尺寸抖动：30% 的粒子加 0.85–1.15
+    if (Math.random() < 0.30) p.r *= (0.85 + Math.random() * 0.30);
+    // ⑤ 运动参数随机化（审美总监意见 6）
+    p.lag = 0.12 + Math.random() * 0.20;        // 迟滞 0.12–0.32s
+    p.dur = 1.55 * (0.85 + Math.random() * 0.35); // 飞行时长 ×0.85–1.2（放慢）
+    p.cubic = Math.random() < 0.45;             // 45% 用 cubic 缓动
+    p.wobble = Math.random() < 0.15;            // 15% 有犹豫回摆
+    return p;
+  }
+  function setup() {
+    P = []; ACC = [];
+    var n = W < 620 ? 210 : 330;
+    for (var i = 0; i < n; i++) P.push(mkP({}));
+  }
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    cv.width = Math.floor(W * DPR); cv.height = Math.floor(H * DPR);
+    cv.style.width = W + "px"; cv.style.height = H + "px";
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    CX = W / 2; CY = H / 2; R = Math.min(W, H) * 0.30;
+    setup();
+  }
+
+  /* ③ 三档离屏 sprite：低 dpr 下靠 alpha 而非半径做亮度分层 */
+  var SPR = {};
+  function buildSprites() {
+    ["near", "mid", "far"].forEach(function (k) {
+      var sz = 64, c = document.createElement("canvas");
+      c.width = sz; c.height = sz;
+      var g = c.getContext("2d");
+      var gr = g.createRadialGradient(sz / 2, sz / 2, 0, sz / 2, sz / 2, sz / 2);
+      gr.addColorStop(0.0, "rgba(23,23,28,1)");
+      gr.addColorStop(0.25, "rgba(23,23,28,0.82)");
+      gr.addColorStop(0.55, "rgba(29,78,216,0.16)");
+      gr.addColorStop(1.0, "rgba(23,23,28,0)");
+      g.fillStyle = gr; g.fillRect(0, 0, sz, sz);
+      SPR[k] = c;
+    });
+  }
+  buildSprites();
+
+  window.addEventListener("resize", resize);
+  resize();
+
+  /* ---------------- 镜头（意见 2：三目标） ---------------- */
+  var cam = { zoom: 1, zoomT: 1, zoomV: 0, shiftX: 0, shiftXT: 0, yaw: 0, yawT: 0 };
+  function project(x, y, z, rotY, rotX) {
+    var cy = Math.cos(rotY), sy = Math.sin(rotY);
+    var X = x * cy - z * sy, Z = x * sy + z * cy;
+    var cx2 = Math.cos(rotX), sx2 = Math.sin(rotX);
+    var Y = y * cx2 - Z * sx2, Z2 = y * sx2 + Z * cx2;
+    var persp = 2.6 / (2.6 + Z2);
+    return {
+      x: CX + cam.shiftX + X * R * persp * cam.zoom,
+      y: CY + Y * R * persp * cam.zoom,
+      s: persp * cam.zoom, z: Z2
+    };
+  }
+  function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+  function easeInQuad(t) { return t * t; }
+  function easeInCubic(t) { return t * t * t; }
+
+  /* ---------------- 状态 ---------------- */
+  var S = "ask";
+  var tStart = performance.now(), tGather = 0, tFreeze = 0, tEmerge = 0;
+  var TOPIC = "", pulse = -1, agentsShown = 0, dimAll = 1;
+  var decompPulse = -1e9, decompCount = 0;   // ③ 课题拆解的亮度波
+  var RIPPLE_SPEED = 1.45;
+  var FREEZE_MS = 1700;           // 放慢：0.9s → 1.7s，让虚线有足够时间生长
+  function now() { return performance.now(); }
+  function since(t) { return now() - t; }
+
+  /* ---------------- 主循环 ---------------- */
+  function frame() {
+    var el = now() - tStart;
+    window.__qzEl = el;           /* 暴露动画时钟：音效模块据此对齐波纹 */
+    var rotY = el * (S === "ask" ? 0.00016 : 0.00044) + cam.yaw;
+    var rotX = Math.sin(el * 0.0007) * 0.16;
+    mouse.x += (mouse.tx - mouse.x) * 0.06;
+    mouse.y += (mouse.ty - mouse.y) * 0.06;
+
+    // 镜头弹簧
+    cam.zoom += (cam.zoomT - cam.zoom) * 0.08 + cam.zoomV;
+    cam.zoomV *= 0.78;
+    cam.shiftX += (cam.shiftXT - cam.shiftX) * 0.10;
+    cam.yaw += (cam.yawT - cam.yaw) * 0.08;
+
+    // ① 以缺口为圆心的径向衰减（替代全局 dimAll）——保留空间梯度
+    var dimCenter = { x: CX + cam.shiftX, y: CY };
+    if (keyEdge >= 0) {
+      var gA = pts[keyA], gB = pts[keyB];
+      var gmp = project((gA.x + gB.x) / 2, (gA.y + gB.y) / 2, (gA.z + gB.z) / 2, rotY, rotX);
+      dimCenter.x = gmp.x; dimCenter.y = gmp.y;
+    }
+    var dimR = Math.max(W, H) * 0.62;
+    function dimAt(px, py) {
+      if (dimAll > 0.995) return 1;
+      var dd = Math.sqrt((px - dimCenter.x) * (px - dimCenter.x) +
+                         (py - dimCenter.y) * (py - dimCenter.y));
+      var fall = Math.pow(Math.max(0, 1 - dd / dimR), 1.6);
+      return dimAll + (1 - dimAll) * fall;
+    }
+
+    ctx.clearRect(0, 0, W, H);
+    var bg = ctx.createRadialGradient(CX, CY, 0, CX, CY, Math.max(W, H) * 0.62);
+    bg.addColorStop(0, "rgba(29,78,216,0.055)");
+    bg.addColorStop(0.45, "rgba(29,78,216,0.028)");
+    bg.addColorStop(1, "rgba(247,243,238,0)");
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+    /* ============ 第一幕：漂浮 + 弱涟漪 ============ */
+    if (S === "ask") {
+      var rp = (el % 3200) / 3200;
+      var rrad = rp * Math.max(W, H) * 0.62;
+      var ra = (1 - rp) * 0.10;
+      var g0 = ctx.createRadialGradient(CX, CY, Math.max(0, rrad - 42), CX, CY, rrad + 42);
+      g0.addColorStop(0.0, "rgba(29,78,216,0)");
+      g0.addColorStop(0.5, "rgba(29,78,216," + ra.toFixed(3) + ")");
+      g0.addColorStop(1.0, "rgba(29,78,216,0)");
+      ctx.fillStyle = g0; ctx.fillRect(0, 0, W, H);
+
+      ctx.globalCompositeOperation = "source-over";
+      for (var i = 0; i < P.length; i++) {
+        var p = P[i];
+        var br = Math.sin(el * 0.0009 + p.ph) * 0.07;
+        var px = p.fx + br + mouse.x * 0.12 * (1 + p.fz);
+        var py = p.fy + br * 0.7 + mouse.y * 0.12 * (1 + p.fz);
+        var pr = project(px, py, p.fz, rotY * 0.3, rotX * 0.3);
+        var dcent = Math.sqrt(px * px + py * py) * R;
+        var near = Math.abs(dcent - rrad) < 46 ? (1 - Math.abs(dcent - rrad) / 46) * 0.5 : 0;
+        var a = 0.16 + 0.16 * (0.5 + 0.5 * Math.sin(el * 0.0012 + p.ph)) + near;
+        ctx.fillStyle = "rgba(29,78,216," + Math.min(0.95, a).toFixed(3) + ")";
+        ctx.beginPath(); ctx.arc(pr.x, pr.y, Math.max(0.5, p.r * pr.s * 0.85), 0, 6.2832); ctx.fill();
+      }
+      ctx.globalCompositeOperation = "source-over";
+      requestAnimationFrame(frame);
+      return;
+    }
+
+    /* ============ 第二幕起 ============ */
+    var el2 = since(tGather) / 1000;
+    var waveR = el2 * RIPPLE_SPEED;
+    var allDone = true;
+
+    // ② 第三幕：极狠的骨架剪影（总监：剪影要有，但要更狠更淡）
+    //    α ≤0.055、去饱和到近黑蓝、节点只留 4 个 1px 十字刻度
+    if (S === "freeze" && dimAll < 0.95) {
+      var sk = (1 - dimAll);
+      ctx.lineWidth = 1;
+      for (var e5 = 0; e5 < edges.length; e5++) {
+        if (e5 === keyEdge) continue;
+        var sA = project(pts[edges[e5][0]].x, pts[edges[e5][0]].y, pts[edges[e5][0]].z, rotY, rotX);
+        var sB = project(pts[edges[e5][1]].x, pts[edges[e5][1]].y, pts[edges[e5][1]].z, rotY, rotX);
+        ctx.strokeStyle = "rgba(52,52,62," + (0.11 * sk * Math.min(sA.s, sB.s) * 2).toFixed(3) + ")";
+        ctx.beginPath(); ctx.moveTo(sA.x, sA.y); ctx.lineTo(sB.x, sB.y); ctx.stroke();
+      }
+      var tickIdx = [3, 29, 61, 97];
+      ctx.strokeStyle = "rgba(74,74,86," + (0.36 * sk).toFixed(3) + ")";
+      for (var t6 = 0; t6 < tickIdx.length; t6++) {
+        var vv = pts[tickIdx[t6]];
+        var vp6 = project(vv.x, vv.y, vv.z, rotY, rotX);
+        ctx.beginPath();
+        ctx.moveTo(vp6.x - 3, vp6.y); ctx.lineTo(vp6.x + 3, vp6.y);
+        ctx.moveTo(vp6.x, vp6.y - 3); ctx.lineTo(vp6.x, vp6.y + 3);
+        ctx.stroke();
+      }
+    }
+
+    // 棱（跳过关键边）
+    for (var e = 0; e < edges.length; e++) {
+      if (e === keyEdge) continue;
+      var A = edges[e][0], B = edges[e][1];
+      var pa0 = pts[A], pb0 = pts[B];
+      var dA = Math.sqrt(pa0.x * pa0.x + pa0.y * pa0.y + pa0.z * pa0.z);
+      var dB = Math.sqrt(pb0.x * pb0.x + pb0.y * pb0.y + pb0.z * pb0.z);
+      var tA = (dA / RIPPLE_SPEED) + 0.20 + 0.90;
+      var tB = (dB / RIPPLE_SPEED) + 0.20 + 0.90;
+      var lit = Math.min(1, Math.max(0, (el2 - Math.max(tA, tB)) / 0.35));
+      if (lit <= 0) { allDone = false; continue; }
+      var pa = project(pa0.x, pa0.y, pa0.z, rotY, rotX);
+      var pb = project(pb0.x, pb0.y, pb0.z, rotY, rotX);
+      var dAmp = 0.16 * lit * Math.min(pa.s, pb.s) * dimAt((pa.x + pb.x) / 2, (pa.y + pb.y) / 2);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "rgba(29,78,216," + dAmp.toFixed(3) + ")";
+      ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
+    }
+
+    // 粒子
+    ctx.globalCompositeOperation = "source-over";
+    for (var m = 0; m < P.length; m++) {
+      var pp = P[m];
+      var d = Math.sqrt(pp.tx * pp.tx + pp.ty * pp.ty + pp.tz * pp.tz) || 0.001;
+      var wake = d / RIPPLE_SPEED;
+      var t = (el2 - wake - pp.lag) / pp.dur;
+      if (t < 0) t = 0; if (t > 1) t = 1;
+      if (t < 1) allDone = false;
+
+      var sinceWake = el2 - wake;
+      if (sinceWake > 0 && sinceWake < 0.25) pp.flash = (1 - sinceWake / 0.25) * 0.9;
+      else if (pp.flash > 0) pp.flash *= 0.88;
+
+      // ⑤ 缓动插值（quad ↔ cubic）
+      var raw = pp.cubic ? easeInCubic(t) : easeInQuad(t);
+      var k = t < 1 ? raw : 1;
+      // ⑤ 犹豫回摆：到位前 0.3s 反向偏一点
+      var wob = 0;
+      if (pp.wobble && t > 0.72 && t < 0.95) {
+        wob = Math.sin((t - 0.72) / 0.23 * Math.PI) * 0.05;
+      }
+      var it = 1 - k;
+      var x = it * it * pp.sx + 2 * it * k * pp.cx + k * k * pp.tx;
+      var y = it * it * pp.sy + 2 * it * k * pp.cy + k * k * pp.ty;
+      var z = pp.sz + (pp.tz - pp.sz) * k;
+      // 临界"剥离"：整体外扩 8%
+      var expand = 1 + 0.08 * (1 - dimAll);
+      x *= expand; y *= expand; z *= expand;
+      x += wob * (pp.tx - pp.sx); y += wob * (pp.ty - pp.sy);
+
+      var pj = project(x, y, z, rotY, rotX);
+      var depth = Math.max(0.35, Math.min(1, (1.6 - pj.z) / 2.4));
+      var localDim = dimAt(pj.x, pj.y);
+      if (pp.wobble && t > 0.40) localDim *= 0.6;
+      // 保留锐利细核（不用 sprite，避免软糊光晕）；亮度分层靠 depth 与 alpha
+      var alphaBreath = 0.88 + 0.12 * Math.sin(now() * 0.0018 + pp.ph * 3);
+      var a2 = (0.20 + 0.80 * k) * depth * localDim * alphaBreath;
+      // ③ 拆解亮度波：一圈往外扫的亮斑，读作"这个视角正在从课题里抽取信息"
+      if (S === "gather" && decompCount > 0) {
+        var dp = (now() - decompPulse) / 1000;
+        if (dp < 0.85) {
+          var dd3 = Math.sqrt(x * x + y * y + z * z);
+          var waveFront = dp * 2.9;
+          var dGap = Math.abs(dd3 - waveFront);
+          if (dGap < 0.30) {
+            a2 *= (1 + (1 - dGap / 0.30) * (1 - dp / 0.85) * 2.2);
+          }
+        }
+      }
+      var col = pp.warm ? WARM : BLUE;
+      ctx.fillStyle = 'rgba(' + col[0] + ',' + col[1] + ',' + col[2] + ',' +
+                      Math.min(1, a2).toFixed(3) + ')';
+      var rad = Math.max(0.6, pp.r * pj.s);
+      ctx.beginPath(); ctx.arc(pj.x, pj.y, rad, 0, 6.2832); ctx.fill();
+
+      // ③ 运动拖尾：汇聚中段（0.15<t<0.9）画一小段尾迹，增加生命感
+      if (t > 0.15 && t < 0.90) {
+        var tPrev = Math.max(0, t - 0.045);
+        var kPrev = pp.cubic ? easeInCubic(tPrev) : easeInQuad(tPrev);
+        var itp = 1 - kPrev;
+        var px2 = itp * itp * pp.sx + 2 * itp * kPrev * pp.cx + kPrev * kPrev * pp.tx;
+        var py2 = itp * itp * pp.sy + 2 * itp * kPrev * pp.cy + kPrev * kPrev * pp.ty;
+        var pz2 = pp.sz + (pp.tz - pp.sz) * kPrev;
+        var pp2 = project(px2, py2, pz2, rotY, rotX);
+        ctx.strokeStyle = 'rgba(' + col[0] + ',' + col[1] + ',' + col[2] + ',' +
+                          (Math.min(1, a2) * 0.32).toFixed(3) + ')';
+        ctx.lineWidth = Math.max(0.5, rad * 0.75);
+        ctx.beginPath(); ctx.moveTo(pp2.x, pp2.y); ctx.lineTo(pj.x, pj.y); ctx.stroke();
+      }
+      if (pp.flash > 0.02 && dimAll > 0.8) {
+        ctx.fillStyle = "rgba(190,215,255," + (pp.flash * 0.55 * dimAt(pj.x, pj.y)).toFixed(3) + ")";
+        ctx.beginPath(); ctx.arc(pj.x, pj.y, rad * 4.2, 0, 6.2832); ctx.fill();
+      }
+      if (t > 0.97) {
+        // 抖动粒子带独立呼吸（第 2/4 幕也持续）
+        var breathe = (pp.r > 1.55) ? (0.85 + 0.15 * Math.sin(now() * 0.0022 + pp.ph)) : 1;
+        ctx.fillStyle = pp.warm
+          ? "rgba(255,248,240," + (0.08 * localDim * breathe).toFixed(3) + ")"
+          : "rgba(29,78,216," + (0.09 * localDim * breathe).toFixed(3) + ")";
+        ctx.beginPath(); ctx.arc(pj.x, pj.y, rad * 3.2, 0, 6.2832); ctx.fill();
+      }
+    }
+
+    // ① 只用**一条橙红虚线**表达"还没接上的边"——不画一堆点（点串像噪点，线才像边）
+    if ((S === "gather" || S === "freeze") && keyEdge >= 0) {
+      var gA7 = pts[keyA], gB7 = pts[keyB];
+      var p7a = project(gA7.x, gA7.y, gA7.z, rotY, rotX);
+      var p7b = project(gB7.x, gB7.y, gB7.z, rotY, rotX);
+      var al7 = (S === "gather")
+        ? Math.min(1, Math.max(0, (el2 - 0.55) / 0.6)) * 0.42
+        : 0.55;
+      if (al7 > 0.01) {
+        // 外发光
+        ctx.strokeStyle = "rgba(" + ACCENT[0] + "," + ACCENT[1] + "," + ACCENT[2] + "," + (al7 * 0.28).toFixed(3) + ")";
+        ctx.lineWidth = 4.5;
+        ctx.setLineDash([4, 8]);
+        ctx.beginPath(); ctx.moveTo(p7a.x, p7a.y); ctx.lineTo(p7b.x, p7b.y); ctx.stroke();
+        // 主线
+        ctx.strokeStyle = "rgba(" + ACCENT[0] + "," + ACCENT[1] + "," + ACCENT[2] + "," + al7.toFixed(3) + ")";
+        ctx.lineWidth = 1.8;
+        ctx.beginPath(); ctx.moveTo(p7a.x, p7a.y); ctx.lineTo(p7b.x, p7b.y); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    // 异色粒子：用户的问题（意见 4）——它们飞向关键边两端并常驻
+    for (var q = 0; q < ACC.length; q++) {
+      var ac = ACC[q];
+      var at = (el2 - ac.delay) / ac.dur;
+      if (at < 0) at = 0; if (at > 1) at = 1;
+      var ak = easeOutCubic(at);
+      var ax = ac.sx + (ac.tx - ac.sx) * ak;
+      var ay = ac.sy + (ac.ty - ac.sy) * ak;
+      var az = ac.sz + (ac.tz - ac.sz) * ak;
+      var ap = project(ax, ay, az, rotY, rotX);
+      // ① 飞行过程中才画（at<0.92）；落位后交给那条虚线，不再留点
+      if (at > 0.92) continue;
+      var aa = (0.35 + 0.65 * ak) * (0.55 + 0.45 * dimAll) * 0.85;
+      var ar = Math.max(0.62, 0.78 * ap.s);
+      ctx.fillStyle = "rgba(" + ACCENT[0] + "," + ACCENT[1] + "," + ACCENT[2] + "," + aa.toFixed(3) + ")";
+      ctx.beginPath(); ctx.arc(ap.x, ap.y, ar, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = "rgba(" + ACCENT[0] + "," + ACCENT[1] + "," + ACCENT[2] + "," + (aa * 0.07).toFixed(3) + ")";
+      ctx.beginPath(); ctx.arc(ap.x, ap.y, ar * 1.6, 0, 6.2832); ctx.fill();
+    }
+    ctx.globalCompositeOperation = "source-over";
+
+    // ★ 6 条扇形引导线：与 6 张视角卡同步点亮，把「6 个视角」这件事画出来
+    if (S === "gather" || S === "freeze") {
+      var lit6 = Math.min(1, Math.max(0, (el2 * 1000 - 700) / 900));
+      if (lit6 > 0.01) {
+        ctx.save();
+        ctx.lineWidth = 1;
+        for (var a6 = 0; a6 < 6; a6++) {
+          // 每条的亮度按"该卡已点亮"逐条跟上
+          var order = Math.min(1, Math.max(0, (el2 * 1000 - 700 - a6 * 820) / 620));
+          if (order <= 0) continue;
+          var ang6 = (-Math.PI / 2) + a6 * (Math.PI * 2 / 6);
+          var ge = R * cam.zoom * 0.94;
+          var gx1 = CX + cam.shiftX + Math.cos(ang6) * R * cam.zoom * 0.18;
+          var gy1 = CY + Math.sin(ang6) * R * cam.zoom * 0.18;
+          var gx2 = CX + cam.shiftX + Math.cos(ang6) * ge;
+          var gy2 = CY + Math.sin(ang6) * ge;
+          var gg = ctx.createLinearGradient(gx1, gy1, gx2, gy2);
+          var al = order * 0.11 * (S === "freeze" ? (0.4 + 0.6 * dimAll) : 1);
+          gg.addColorStop(0, "rgba(120,175,255," + (al * 1.4).toFixed(3) + ")");
+          gg.addColorStop(0.55, "rgba(90,150,255," + (al * 0.7).toFixed(3) + ")");
+          gg.addColorStop(1, "rgba(29,78,216,0)");
+          ctx.strokeStyle = gg;
+          ctx.beginPath(); ctx.moveTo(gx1, gy1); ctx.lineTo(gx2, gy2); ctx.stroke();
+          // 外端的极淡刻度点
+          ctx.fillStyle = "rgba(150,195,255," + (al * 2.2).toFixed(3) + ")";
+          ctx.beginPath(); ctx.arc(gx2, gy2, 1.8 * cam.zoom, 0, 6.2832); ctx.fill();
+        }
+        ctx.restore();
+      }
+    }
+
+    // 汇聚涟漪可视化
+    if (S === "gather") {
+      var wr = Math.min(waveR, 3.2) * R * cam.zoom;
+      var wg = ctx.createRadialGradient(CX + cam.shiftX, CY, Math.max(0, wr - 30),
+                                        CX + cam.shiftX, CY, wr + 30);
+      wg.addColorStop(0, "rgba(90,150,255,0)");
+      wg.addColorStop(0.5, "rgba(120,175,255,0.10)");
+      wg.addColorStop(1, "rgba(29,78,216,0)");
+      ctx.fillStyle = wg; ctx.fillRect(0, 0, W, H);
+    }
+
+    // 六视角依次点亮
+    if (S === "gather") {
+      var want = Math.min(AGENTS.length, Math.floor(Math.max(0, el2 * 1000 - 700) / 820));
+      while (agentsShown < want) {
+        (function (idx) {
+          var elx = document.getElementById("ag" + idx);
+          if (elx) setTimeout(function () { elx.classList.add("on"); }, 20);
+        })(agentsShown);
+        agentsShown++;
+        decompPulse = now();      // ③ 每点亮一张卡，就发一圈亮度波
+        decompCount++;
+      }
+      if (allDone && el2 > 5.9) goScene("freeze");
+    }
+
+    /* ============ 第三幕：临界停顿 0.9s（剥离式压暗 + 横移把缺口送到黄金分割位） ============ */
+    if (S === "freeze" || S === "emerge") {
+      var fe = since(tFreeze) / 1000;
+      // 剥离：0→0.35s 压暗到 0.35；之后按脉动微调
+      var target = 0.35 + 0.10 * Math.sin(fe * (2 * Math.PI / 0.30)) * (S === "freeze" ? 1 : 0);
+      if (S === "freeze") {
+        var pz = Math.min(1, fe / 0.35);
+        dimAll = 1 - (1 - target) * easeOutCubic(pz);
+      }
+      // 关键边：虚线 + 两端满亮
+      if (S === "freeze" && keyEdge >= 0) {
+        var A2 = pts[keyA], B2 = pts[keyB];
+        var qa = project(A2.x, A2.y, A2.z, rotY, rotX);
+        var qb = project(B2.x, B2.y, B2.z, rotY, rotX);
+        var phase = (fe % 0.60) / 0.60;                 // 0.6s 一个呼吸周期（两端反相）
+        var phA = 0.55 + 0.45 * Math.sin(phase * Math.PI * 2);
+        var phB = 0.55 + 0.45 * Math.sin(phase * Math.PI * 2 + Math.PI);
+        // ③ 把「等待」变成可读的进度：虚线沿线段生长（0 → 100%），恰好 0.9s 接上
+        var prog = Math.min(1, fe / (FREEZE_MS / 1000));
+        var segLen = Math.sqrt((qb.x - qa.x) * (qb.x - qa.x) + (qb.y - qa.y) * (qb.y - qa.y));
+        var ex = qa.x + (qb.x - qa.x) * prog;
+        var ey = qa.y + (qb.y - qa.y) * prog;
+        ctx.save();
+        ctx.setLineDash([5, 7]);
+        ctx.lineWidth = 1.4;
+        ctx.strokeStyle = "rgba(255,150,110," + (0.55 + 0.45 * prog).toFixed(3) + ")";
+        ctx.beginPath(); ctx.moveTo(qa.x, qa.y); ctx.lineTo(ex, ey); ctx.stroke();
+        // 生长端点的亮点
+        ctx.globalCompositeOperation = "source-over";
+        var tipG = ctx.createRadialGradient(ex, ey, 0, ex, ey, 14);
+        tipG.addColorStop(0, "rgba(255,180,140," + (0.6 + 0.4 * prog).toFixed(3) + ")");
+        tipG.addColorStop(1, "rgba(255,122,69,0)");
+        ctx.fillStyle = tipG; ctx.beginPath(); ctx.arc(ex, ey, 14, 0, 6.2832); ctx.fill();
+        ctx.globalCompositeOperation = "source-over";
+        ctx.restore();
+        ctx.globalCompositeOperation = "source-over";
+        [[qa, phA], [qb, phB]].forEach(function (pair) {
+          var q1 = pair[0], ph = pair[1];
+          var gr = ctx.createRadialGradient(q1.x, q1.y, 0, q1.x, q1.y, 30);
+          gr.addColorStop(0, "rgba(" + ACCENT[0] + "," + ACCENT[1] + "," + ACCENT[2] + "," + (ph * 0.85).toFixed(3) + ")");
+          gr.addColorStop(1, "rgba(140,185,255,0)");
+          ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(q1.x, q1.y, 30, 0, 6.2832); ctx.fill();
+        });
+        ctx.globalCompositeOperation = "source-over";
+        // ③ 末帧静帧 60ms（让爆发点更干脆）
+        if (fe > FREEZE_MS / 1000 + 0.06) goScene("emerge");
+      }
+    }
+
+    /* ============ 第四幕：合拢 + 脉冲 + 后坐 ============ */
+    if (S === "emerge" || S === "enter") {
+      if (pulse < 0) {
+        pulse = now();
+        dimAll = 1;
+        cam.zoomV = 0.055;                 // 推进一拍
+        if (keyEdge >= 0) {
+          var A3 = pts[keyA], B3 = pts[keyB];
+          var qa3 = project(A3.x, A3.y, A3.z, rotY, rotX);
+          var qb3 = project(B3.x, B3.y, B3.z, rotY, rotX);
+          ctx.strokeStyle = "rgba(" + ACCENT[0] + "," + ACCENT[1] + "," + ACCENT[2] + ",0.98)";
+          ctx.lineWidth = 2.4;
+          ctx.beginPath(); ctx.moveTo(qa3.x, qa3.y); ctx.lineTo(qb3.x, qb3.y); ctx.stroke();
+        }
+      }
+      var pe = (now() - pulse) / 1000;
+      var glow = Math.max(0, 1 - pe / 0.90);
+      if (glow > 0.01) {
+        ctx.globalCompositeOperation = "source-over";
+        for (var q2 = 0; q2 < pts.length; q2++) {
+          var v = pts[q2];
+          var vp = project(v.x, v.y, v.z, rotY, rotX);
+          ctx.fillStyle = "rgba(255,248,240," + (glow * 0.55).toFixed(3) + ")";
+          ctx.beginPath(); ctx.arc(vp.x, vp.y, 3.2 * vp.s, 0, 6.2832); ctx.fill();
+        }
+        ctx.globalCompositeOperation = "source-over";
+      }
+      var bt = pe / 1.60;
+      if (bt < 1) {
+        var brr = R * cam.zoom * (0.5 + bt * 2.8);
+        var ba = (1 - bt) * 0.45;
+        var g2 = ctx.createRadialGradient(CX + cam.shiftX, CY, brr * 0.52,
+                                          CX + cam.shiftX, CY, brr);
+        g2.addColorStop(0, "rgba(29,78,216,0)");
+        g2.addColorStop(0.70, "rgba(125,180,255," + (ba * 0.85).toFixed(3) + ")");
+        g2.addColorStop(1, "rgba(29,78,216,0)");
+        ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
+      }
+    }
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  /* ---------------- 场景切换 ---------------- */
+  function goScene(s) {
+    if (s === "gather") {
+      S = "gather"; tGather = now();
+      show("qz-intro-s1", false); show("qz-intro-s2", true);
+      spawnFly();
+      cam.zoomT = 1.12;                    // 意见 2①：汇聚推镜
+    } else if (s === "freeze") {
+      S = "freeze"; tFreeze = now();
+      // 意见 2②：横移，把缺口中点送到黄金分割线（0.382W）
+      var rotY = 0, rotX = 0;
+      var A = pts[keyA], B = pts[keyB];
+      var mx = (A.x + B.x) / 2, my = (A.y + B.y) / 2, mz = (A.z + B.z) / 2;
+      var mp = project(mx, my, mz, rotY, rotX);
+      // ① 就近平移（±0.12W）+ **0.025 rad 朝缺口方向的微 yaw**
+      //    不是「追黄金分割」，只是让镜头「向那条边靠过去」
+      var needX = (W * 0.382) - mp.x;
+      var maxX = W * 0.12;
+      cam.shiftXT = Math.max(-maxX, Math.min(maxX, needX));
+      cam.yawT = (needX >= 0 ? 1 : -1) * 0.025;
+    } else if (s === "emerge") {
+      S = "emerge"; tEmerge = now();
+      show("qz-intro-s2", false); show("qz-intro-s3", true);
+      cam.zoomT = 1.0;
+      cam.shiftXT = 0;
+      cam.yawT = 0;
+    } else if (s === "enter") {
+      S = "enter"; show("qz-intro-s4", true);
+      // ① 标题整层上移，与按钮分离
+      var s3 = document.getElementById("qz-intro-s3");
+      if (s3) s3.classList.add("qz-up");
+    }
+  }
+
+  /* ---------------- 用户文字 → 异色粒子 → 关键边两端 ---------------- */
+  function spawnFly() {
+    var host = document.getElementById("qz-intro-fly");
+    var box = document.getElementById("qz-in");
+    if (!host || !box) return;
+    var r = box.getBoundingClientRect();
+    var txt = (TOPIC || "你的问题").slice(0, 14);
+    host.innerHTML = "";
+    var W2 = window.innerWidth, H2 = window.innerHeight;
+    var bx = r.left + r.width / 2, by = r.top + r.height / 2;
+    for (var i = 0; i < txt.length; i++) {
+      var d = document.createElement("span");
+      d.textContent = txt[i];
+      // 起始位置：沿输入框横向铺开
+      var u = txt.length <= 1 ? 0 : (i / (txt.length - 1) - 0.5);
+      d.style.left = (bx + u * r.width * 0.86) + "px";
+      d.style.top = by + "px";
+      d.style.color = "rgba(255,240,225,.95)";
+      // ① 发散方向：以上方为主的扇形（-150° ~ -30°），越靠边角度越大
+      var ang = (-Math.PI / 2) + u * (Math.PI * 0.62);
+      var dist = 150 + Math.random() * 170;
+      d.style.setProperty("--dx", (Math.cos(ang) * dist).toFixed(1) + "px");
+      d.style.setProperty("--dy", (Math.sin(ang) * dist - 30).toFixed(1) + "px");
+      d.style.animationDelay = (i * 26) + "ms";
+      host.appendChild(d);
+    }
+    // ② 停留时长缩短：进入临界停顿时它已经散了
+    setTimeout(function () { host.innerHTML = ""; }, 980);
+
+    // 异色粒子：从输入框位置飞向关键边两端（意见 4）
+    ACC = [];
+    var sxw = (r.left + r.width / 2 - CX) / (R * 1.12);
+    var syw = (r.top + r.height / 2 - CY) / (R * 1.12);
+    // ① 异色粒子**沿关键边均匀排开**——不是堆在两端，而是串成那条边
+    var A0 = pts[keyA], B0 = pts[keyB];
+    // ① 数量加倍、间距均匀 —— 让它读成"一条虚线边"，而不是"一坨团"
+    var n = Math.max(18, Math.min(34, txt.length * 3));
+    for (var k = 0; k < n; k++) {
+      var u = (k + 0.5) / n;                         // 0→1 沿边
+      var jx = (Math.random() - 0.5) * 0.018;        // 极小抖动，保持"线"的感觉
+      var jy = (Math.random() - 0.5) * 0.018;
+      ACC.push({
+        sx: sxw + (Math.random() - 0.5) * 0.20,
+        sy: syw + (Math.random() - 0.5) * 0.10,
+        sz: 0.2,
+        tx: A0.x + (B0.x - A0.x) * u + jx,
+        ty: A0.y + (B0.y - A0.y) * u + jy,
+        tz: A0.z + (B0.z - A0.z) * u,
+        delay: 0.06 + u * 0.55,                      // 沿边依次亮起
+        dur: 0.80,
+        u: u
+      });
+    }
+  }
+
+  /* ---------------- 第一幕输入 ---------------- */
+  var inp = document.getElementById("qz-in");
+  var go = document.getElementById("qz-go");
+  var samples = document.getElementById("qz-samples");
+  SAMPLES.forEach(function (s) {
+    var b = document.createElement("button");
+    b.type = "button"; b.textContent = s;
+    b.onclick = function (e) { e.stopPropagation(); inp.value = s; inp.focus(); };
+    samples.appendChild(b);
+  });
+  function nudge() {
+    inp.focus();
+    inp.classList.remove("qz-shake");
+    void inp.offsetWidth;
+    inp.classList.add("qz-shake");
+  }
+  inp.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); submit(); }
+    e.stopPropagation();
+  });
+  inp.addEventListener("click", function (e) { e.stopPropagation(); });
+  function submit() {
+    if (S !== "ask") return;
+    TOPIC = (inp.value || "").trim();
+    if (!TOPIC) { nudge(); return; }
+    goScene("gather");
+  }
+  go.addEventListener("click", function (e) { e.stopPropagation(); submit(); });
+
+  var host = document.getElementById("qz-agents");
+  AGENTS.forEach(function (a, i) {
+    var d = document.createElement("div");
+    d.className = "qz-agent"; d.id = "ag" + i;
+    d.innerHTML = '<i>' + (i + 1) + '</i>'
+      + '<b>' + a.n + '</b>'
+      + '<em class="kv kv-' + (a.k || 'info') + '">' + a.v + '</em>'
+      + '<span>' + a.d + '</span>';
+    host.appendChild(d);
+  });
+
+  /* ---------------- 第四幕：用户主动进入 ---------------- */
+  var enterBtn = document.getElementById("qz-enter");
+  if (enterBtn) enterBtn.addEventListener("click", function (e) { e.stopPropagation(); enter(); });
+  function enter() {
+    if (S !== "enter") return;
+    try {
+      var ti = document.getElementById("topicInput");
+      if (ti && TOPIC) {
+        ti.value = TOPIC;
+        ti.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    } catch (er) {}
+    close();
+  }
+  var waitEnter = setInterval(function () {
+    if (S === "emerge" && since(tEmerge) > 3400) { clearInterval(waitEnter); goScene("enter"); }
+    if (S === "enter" || S === "done") clearInterval(waitEnter);
+  }, 120);
+
+  document.addEventListener("mousemove", function (e) {
+    mouse.tx = (e.clientX / window.innerWidth - 0.5) * 2;
+    mouse.ty = (e.clientY / window.innerHeight - 0.5) * 2;
+  });
+
+  var closed = false;
+  function close() {
+    if (closed) return; closed = true; S = "done";
+    ov.classList.add("qz-intro-out");
+    setTimeout(function () {
+      if (ov.parentNode) ov.parentNode.removeChild(ov);
+      window.removeEventListener("resize", resize);
+    }, 520);
+  }
+  function skip() {
+    try {
+      var ti = document.getElementById("topicInput");
+      if (ti && TOPIC && !ti.value) ti.value = TOPIC;
+    } catch (e) {}
+    close();
+  }
+  var skipBtn = document.getElementById("qz-skip");
+  if (skipBtn) skipBtn.addEventListener("click", function (e) { e.stopPropagation(); skip(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") { e.preventDefault(); skip(); }
+  });
+  var never = document.getElementById("qz-never");
+  if (never) {
+    never.addEventListener("click", function (e) {
+      e.stopPropagation();
+      try { localStorage.setItem(KEY_OFF, "1"); } catch (er) {}
+      skip();
+    });
+  }
+})();
+
+</script>
+<style>
+
+/* ---- 截图与演示模式（2026-10-21）----
+   shot=1  : 禁用过渡、强制首屏可见（无头截图用）
+   nointro=1: 跳过开场，直接进控制台（答辩现场用） */
+body.qz-shot #qz-intro-s1, body.qz-shot #qz-intro-s1 *{
+  transition:none !important;animation:none !important;
+  opacity:1 !important;transform:none !important;filter:none !important}
+body.qz-nointro #qz-intro{display:none !important}
+
+</style>
+<script>/* qz-shot-mode-js */
+(function(){
+  try{
+    var q = String(location.search||"").toLowerCase();
+    if (q.indexOf("shot=1") >= 0) document.body.classList.add("qz-shot");
+    if (q.indexOf("nointro=1") >= 0) {
+      document.body.classList.add("qz-nointro");
+      var ov = document.getElementById("qz-intro");
+      if (ov && ov.parentNode) ov.parentNode.removeChild(ov);
+    }
+  }catch(e){}
+})();
+</script>
+<style>
+/* ---- 首屏增强 2.0（2026-10-21）---- */
+.qz-logo{width:22px;height:22px;border-radius:6px;display:inline-flex;
+  align-items:center;justify-content:center;font-size:12px;font-weight:700;
+  color:#0B1220;background:linear-gradient(135deg,#7FB2FF,#B9D4FF);
+  letter-spacing:0;box-shadow:0 2px 10px rgba(90,150,255,.35);flex:none;
+  margin-right:2px}
+.qz-h1sub{font-size:clamp(.9rem,2.3vw,1.04rem) !important;
+  color:rgba(224,233,246,.88) !important;max-width:37rem !important}
+.qz-output{margin-top:18px;font-size:.82rem;color:rgba(200,214,236,.76);
+  letter-spacing:.02em;line-height:1.9}
+.qz-output .qz-otitle{color:rgba(150,190,255,.92);font-weight:600;margin-right:.55em}
+.qz-output b{color:rgba(234,241,252,.95);font-weight:500}
+.qz-credit-footer{position:absolute;left:0;right:0;bottom:16px;text-align:center;z-index:99999;
+  font-size:.74rem;color:rgba(176,194,220,.62);letter-spacing:.04em}
+</style>
+
+<style>
+/* ---- 首屏第三轮（2026-10-21）---- */
+.qz-def{margin-top:.8rem;font-size:.84rem;color:rgba(154,196,255,.95);
+  letter-spacing:.02em;font-weight:400}
+</style>
+<style>
+/* ---- 首屏最后一轮（2026-10-21）---- */
+.qz-sample{margin-top:16px;max-width:44rem;margin-left:auto;margin-right:auto;
+  text-align:left;background:#FFFFFF;border:1px solid #DED7CC;border-radius:10px;
+  padding:11px 16px;line-height:1.75}
+.qz-sample-k{display:inline-block;font-size:.72rem;font-weight:700;color:#1D4ED8;
+  letter-spacing:.08em;margin-right:.7em;vertical-align:top}
+.qz-sample-t{font-size:.82rem;color:#4A4538}
+</style><style>
+/* ---- 真实报告样例（2026-10-21）---- */
+</style><style id="qz-paper-theme">
+/* ============================================================
+   开场「纸上墨迹」主题（2026-10-21 v2）
+   粒子已由 canvas 原生绘制为墨色（source-over），此块只管版面配色
+   ============================================================ */
+#qz-intro{background:#F7F3EE !important}
+#qz-intro-vig{background:radial-gradient(circle at center,
+  rgba(247,243,238,0) 38%, rgba(247,243,238,.92) 100%) !important}
+#qz-intro-s2.qz-on,#qz-intro-s3.qz-on{
+  background:radial-gradient(ellipse 58% 38% at 50% 50%,
+    rgba(247,243,238,.94) 0%, rgba(247,243,238,.70) 48%, rgba(247,243,238,0) 100%) !important}
+
+/* 文字 */
+.qz-h1{color:#17171C !important;font-weight:500 !important;text-shadow:none !important}
+.qz-h2{color:#3A3A42 !important;text-shadow:none !important}
+.qz-h1sub{color:#4A4538 !important;text-shadow:none !important}
+.qz-def{color:#1D4ED8 !important;font-weight:500}
+.qz-tip{color:#6E6858 !important}
+
+/* 品牌 */
+.qz-brand{color:#6E6858 !important}
+.qz-brand .qz-brand-name{color:#17171C !important;font-weight:700 !important}
+.qz-brand .qz-brand-en{color:#8B8578 !important;opacity:1 !important}
+.qz-brand .qz-dots i{background:#1D4ED8 !important;opacity:.5 !important}
+.qz-logo{background:#17171C !important;color:#F7F3EE !important;box-shadow:none !important}
+
+/* 顶部机构条 */
+
+/* 输入框 */
+#qz-in{background:#FFFFFF !important;border:1px solid #DED7CC !important;
+  color:#17171C !important;box-shadow:0 1px 2px rgba(23,23,28,.05) !important;
+  backdrop-filter:none !important}
+#qz-in::placeholder{color:#9A9486 !important}
+#qz-in:focus{border-color:#1D4ED8 !important;background:#FFFFFF !important;
+  box-shadow:0 0 0 4px rgba(29,78,216,.10) !important}
+
+/* 示例 */
+.qz-samples button{background:#FFFFFF !important;border:1px solid #DED7CC !important;
+  color:#3A3A42 !important;text-shadow:none !important;box-shadow:none !important}
+.qz-samples button:hover{background:#EEF3FE !important;border-color:#1D4ED8 !important;
+  color:#1D4ED8 !important}
+
+/* 产出物 / 可信度 */
+.qz-output{color:#4A4538 !important}
+.qz-output .qz-otitle{color:#1D4ED8 !important}
+.qz-output b{color:#17171C !important}
+.qz-cred{color:#6E6858 !important}
+.qz-cred b{color:#1D4ED8 !important}
+
+/* 报告样例：白卡片在暖白上要加一层细边与轻阴影 */
+
+/* 第二幕角色卡 */
+.qz-stage{color:#17171C !important;text-shadow:none !important}
+.qz-agent{border:1px solid #DED7CC !important;background:#FFFFFF !important}
+.qz-agent.on{border-color:#1D4ED8 !important;background:#EEF3FE !important;box-shadow:none !important}
+.qz-agent b{color:#17171C !important}
+.qz-agent span{color:#5A5648 !important;text-shadow:none !important}
+
+/* 第三幕 */
+#qz-title{color:#17171C !important;text-shadow:none !important;font-weight:600 !important}
+#qz-sub{color:#3A3A42 !important}
+
+/* 跳过 / 不再显示 */
+#qz-skip{background:#FFFFFF !important;border:1px solid #DED7CC !important;
+  color:#3A3A42 !important;box-shadow:0 1px 3px rgba(23,23,28,.06) !important;
+  text-shadow:none !important;backdrop-filter:none !important}
+#qz-skip:hover{background:#EEF3FE !important;border-color:#1D4ED8 !important;color:#1D4ED8 !important}
+#qz-never{color:#6E6858 !important;text-shadow:none !important}
+
+/* 飞散小词 */
+#qz-intro-fly span{text-shadow:none !important;color:#1D4ED8 !important;opacity:.9 !important}
+
+/* 第四幕按钮 */
+#qz-enter{background:linear-gradient(135deg,#1D4ED8,#3B6EF0) !important;
+  color:#fff !important;box-shadow:0 4px 16px rgba(29,78,216,.22) !important}
+</style><style id="qz-fix-s4">
+/* 第三幕：限宽 + 副标降一档，配合 -168px 让位，彻底不压第四幕 */
+#qz-intro-s3{padding-bottom:0 !important}
+#qz-intro-s3 #qz-title{font-size:clamp(1.7rem,6vw,3.4rem) !important}
+#qz-intro-s3 #qz-sub{max-width:min(88vw,30rem) !important;
+  font-size:clamp(.72rem,2vw,.94rem) !important;line-height:1.65 !important}
+/* 第四幕：与第三幕拉开，且按钮 + 提示不再自身重叠 */
+#qz-intro-s4{gap:0 !important}
+#qz-intro-s4 #qz-enter{margin-top:0 !important}
+
+/* 声音开关 */
+</style><script>/* qz-act-jump */
+(function(){
+  function jump(){
+    var m = /[?&]act=([1-4])/.exec(location.search || '');
+    if (!m) return;
+    var n = parseInt(m[1], 10);
+    for (var i = 1; i <= 4; i++){
+      var el = document.getElementById('qz-intro-s' + i);
+      if (!el) continue;
+      if (i === n) el.classList.add('qz-on');
+      else el.classList.remove('qz-on');
+    }
+    /* 真实流程里第一幕在进入第二幕时就被关掉；
+       调试参数也必须照做，否则第一幕的输入框会与第四幕按钮重叠 */
+    var s3 = document.getElementById('qz-intro-s3');
+    if (s3) s3.classList.toggle('qz-up', n >= 4);
+    /* 真实流程切到第四幕时，第三幕的 qz-on 并没有被移除（只加了 qz-up）。
+       调试参数也复制这个状态，否则测不出「第一幕被误藏」这类问题。 */
+    if (n >= 4 && s3) s3.classList.add('qz-on');
+    // 冻结动画，方便截图与演示
+    document.body.classList.add('qz-shot');
+  }
+  if (document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(jump, 60); });
+  else
+    setTimeout(jump, 60);
+})();
+</script><style id="qz-s4-layout">
+/* 第四幕：抬到报告卡片上方，不再压住它 */
+#qz-intro-s4{justify-content:flex-start !important;padding-top:40vh !important;
+  background:none !important}
+#qz-intro-s4 #qz-enter{margin-top:0 !important}
+#qz-intro-s4 .qz-tip{margin-top:12px !important}
+
+/* 第四幕出现时，隐藏第一幕的按钮与 Enter 提示，避免两个「进入预演 →」并存 */
+#qz-intro:has(#qz-intro-s4.qz-on) #qz-intro-s1 #qz-go{
+  opacity:0 !important;pointer-events:none !important;transition:opacity .3s ease}
+#qz-intro:has(#qz-intro-s4.qz-on) #qz-intro-s1 .qz-tip{
+  opacity:0 !important;transition:opacity .3s ease}
+
+/* 第三幕上移后不要和第四幕抢位置（保留适度上移即可） */
+#qz-intro-s3.qz-up{transform:translateY(-96px) !important}
+</style><style id="qz-freeze-s4">
+/* 截图模式：第四幕也冻结（否则按钮停在淡入中途，呈半透明） */
+body.qz-shot #qz-intro-s4.qz-on, body.qz-shot #qz-intro-s4.qz-on *{
+  transition:none !important;animation:none !important;opacity:1 !important}
+body.qz-shot #qz-intro-s3.qz-on, body.qz-shot #qz-intro-s3.qz-on *{
+  transition:none !important;animation:none !important;opacity:1 !important}
+/* 但第三幕的上移必须保留，否则会压住第四幕 */
+body.qz-shot #qz-intro-s3.qz-up{transform:translateY(-96px) !important}
+</style><style id="qz-s4-final">
+/* 第四幕出现 → 第三幕隐藏（四幕是依次替换，不是叠加） */
+#qz-intro:has(#qz-intro-s4.qz-on) #qz-intro-s3{
+  opacity:0 !important;pointer-events:none !important;transition:opacity .35s ease}
+
+/* 第四幕：按钮落在原第一幕按钮的位置，且不压下方内容 */
+#qz-intro-s4{justify-content:center !important;padding-top:0 !important;
+  /* 不加实底（实底会把标题也盖掉，第四幕变成空屏）。
+     改为隐藏第一幕的输入区/示例/按钮/产出物，只留标题等上下文，
+     这样第四幕的按钮落在干净的位置，且仍有上下文。 */
+  background:none !important}
+#qz-intro:has(#qz-intro-s4.qz-on) #qz-intro-s1 .qz-h2,
+#qz-intro:has(#qz-intro-s4.qz-on) #qz-intro-s1 .qz-row,
+#qz-intro:has(#qz-intro-s4.qz-on) #qz-intro-s1 .qz-samples,
+#qz-intro:has(#qz-intro-s4.qz-on) #qz-intro-s1 #qz-go,
+#qz-intro:has(#qz-intro-s4.qz-on) #qz-intro-s1 .qz-tip,
+#qz-intro:has(#qz-intro-s4.qz-on) #qz-intro-s1 .qz-output,
+#qz-intro:has(#qz-intro-s4.qz-on) #qz-intro-s1 .qz-cred{
+  opacity:0 !important;pointer-events:none !important;transition:opacity .3s ease}
+#qz-intro-s4 #qz-enter{margin-top:0 !important}
+#qz-intro-s4 .qz-tip{margin-top:6px !important}
+
+/* 第三幕不再需要 qz-up 让位（已隐藏），恢复居中即可 */
+#qz-intro-s3.qz-up{transform:none !important}
+</style><style id="qz-act-isolate">
+/* 每一幕是独立的一屏：s2/s3 出现时把 s1 整体隐藏，避免品牌行透出 */
+/* 第二幕：藏掉第一幕（独立一屏） */
+#qz-intro:has(#qz-intro-s2.qz-on) #qz-intro-s1{
+  opacity:0 !important;pointer-events:none !important;transition:opacity .4s ease}
+/* 第三幕：藏掉第一幕，**但第四幕出现时不藏**
+   —— 因为真实流程切到第四幕时 s3 的 .qz-on 还在（只加了 qz-up），
+   不排除的话第一幕（含 logo）会在第四幕被误藏 */
+#qz-intro:has(#qz-intro-s3.qz-on):not(:has(#qz-intro-s4.qz-on)) #qz-intro-s1{
+  opacity:0 !important;pointer-events:none !important;transition:opacity .4s ease}
+</style><style id="qz-score-fix">
+/* ============================================================
+   按四幕视觉评分修订（2026-10-21）
+   四幕交叉一致：示例标签、状态提示、跳过按钮、截图容器 对比度不足
+   ============================================================ */
+
+/* ① 示例标签：12 → 14px，加大内边距与间距（模型标 high） */
+.qz-samples{gap:10px !important;margin-top:22px !important}
+.qz-samples button{font-size:14px !important;padding:9px 17px !important;
+  border-color:#CFC7B8 !important;color:#2F2F36 !important}
+
+/* ② 状态提示与通用小字：13 → 14px */
+.qz-tip{font-size:14px !important;color:#5E594E !important}
+#qz-intro-s4 .qz-tip{margin-top:14px !important}
+
+/* ③ 「跳过开场」：提高对比度与字重（三幕都报） */
+#qz-skip{color:#2F2F36 !important;border-color:#C9C1B2 !important;
+  font-weight:500 !important;font-size:.82rem !important;padding:8px 16px !important}
+#qz-skip:hover{color:#1D4ED8 !important;border-color:#1D4ED8 !important}
+
+/* ④ 报告截图容器：从「陷进去」变成「浮起来」 */
+
+/* ⑤ 「你正在纠结什么决策？」也提一档，它是输入区的引导语 */
+.qz-h2{font-size:clamp(.95rem,2.7vw,1.16rem) !important;color:#33333B !important}
+</style><style id="qz-freeze-all">
+/* 截图模式覆盖全部四幕（含第二幕角色卡），便于逐幕检查 */
+body.qz-shot #qz-intro-s2.qz-on, body.qz-shot #qz-intro-s2.qz-on *{
+  transition:none !important;animation:none !important;opacity:1 !important}
+body.qz-shot .qz-agent{
+  opacity:1 !important;transform:none !important}
+body.qz-shot .qz-agent.on{border-color:#1D4ED8 !important;background:#EEF3FE !important}
+</style><style id="qz-cards2">
+/* 第二幕角色卡重做：序号 + 角色 + 立场徽章 + 依据 */
+.qz-agents{grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  gap:14px 16px !important;max-width:min(92vw,860px) !important;margin:26px auto 0 !important}
+.qz-agent{position:relative !important;display:grid !important;
+  grid-template-columns:auto 1fr !important;align-items:center !important;
+  gap:5px 11px !important;padding:15px 20px 15px 18px !important;
+  border-radius:14px !important;border:1px solid #DED7CC !important;
+  background:#FFFFFF !important;text-align:left !important}
+.qz-agent.on{border-color:#B9CDF5 !important;background:#FBFCFE !important;
+  box-shadow:0 2px 10px rgba(29,78,216,.06) !important}
+
+.qz-agent i{grid-row:1/3;align-self:start;font-style:normal !important;
+  font-size:.7rem !important;font-weight:600 !important;color:#1D4ED8 !important;
+  background:#EEF3FE !important;border-radius:6px !important;
+  padding:3px 7px !important;letter-spacing:.06em !important;
+  min-width:22px;text-align:center}
+.qz-agent b{font-size:1rem !important;font-weight:600 !important;
+  color:#17171C !important;letter-spacing:.02em !important;line-height:1.25 !important}
+
+.qz-agent .kv{font-style:normal !important;font-size:.78rem !important;
+  font-weight:600 !important;letter-spacing:.03em !important;
+  border-radius:5px !important;padding:2px 8px !important;
+  justify-self:start !important;white-space:nowrap}
+.qz-agent .kv-no{color:#B4362E !important;background:#FBEDEB !important;border:1px solid #F0CFCB !important}
+.qz-agent .kv-warn{color:#91621A !important;background:#FCF4E4 !important;border:1px solid #F0E0BD !important}
+.qz-agent .kv-info{color:#1D4ED8 !important;background:#EEF3FE !important;border:1px solid #D3E0FA !important}
+
+.qz-agent span{grid-column:1/3 !important;font-size:.8rem !important;
+  color:#5A5648 !important;line-height:1.5 !important;margin-top:2px}
+.qz-stage{font-size:clamp(1.05rem,3vw,1.5rem) !important;font-weight:600 !important;
+  color:#17171C !important;letter-spacing:.02em !important}
+</style><style id="qz-s4-rich">
+/* 第四幕：三步预告，填掉"只有一个按钮"的空 */
+#qz-intro-s4{justify-content:center !important}
+.qz-s4-next{display:flex;gap:0;margin-top:38px;flex-wrap:wrap;
+  justify-content:center;max-width:min(90vw,760px)}
+.s4n{display:flex;flex-direction:column;align-items:center;gap:7px;
+  padding:0 26px;position:relative;min-width:150px}
+/* 步骤之间的细连线 */
+.s4n + .s4n::before{content:"";position:absolute;left:0;top:15px;
+  width:1px;height:26px;background:#E2DACD}
+.s4n i{font-style:normal;font-size:.68rem;font-weight:600;color:#1D4ED8;
+  background:#EEF3FE;border:1px solid #D3E0FA;border-radius:999px;
+  width:30px;height:30px;display:flex;align-items:center;justify-content:center;
+  letter-spacing:.02em}
+.s4n b{font-size:.84rem;font-weight:600;color:#17171C;letter-spacing:.04em}
+.s4n span{font-size:.72rem;color:#6E6858;line-height:1.45;text-align:center;
+  max-width:160px}
+@media(max-width:640px){
+  .qz-s4-next{gap:18px}
+  .s4n{padding:0 10px;min-width:auto}
+  .s4n + .s4n::before{display:none}
+}
+</style><audio id="qz-bgm" src="static/bgm/almost-floating.mp3" loop preload="auto"></audio>
+<button id="qz-sound" type="button">♪ 声音 开</button>
+<style id="qz-bgm-css">
+#qz-bgm{display:none}
+#qz-sound{position:fixed;left:20px;bottom:16px;z-index:100000;
+  background:rgba(255,255,255,.94);border:1px solid #D6CEC0;border-radius:999px;
+  padding:8px 17px;font-size:.8rem;font-weight:500;color:#2F2F36;cursor:pointer;
+  font-family:inherit;letter-spacing:.02em;box-shadow:0 2px 8px rgba(23,23,28,.08);
+  transition:all .18s ease}
+#qz-sound:hover{border-color:#1D4ED8;color:#1D4ED8;background:#EEF3FE}
+#qz-sound.on{color:#1D4ED8;border-color:#1D4ED8;background:#EEF3FE}
+/* 声音按钮在截图/调试模式下也保留，答辩用 ?act=4 时要能点 */
+</style>
+<script>/* [patch] ?wide=1 录屏时让内容铺满屏幕 */
+(function(){
+  var wide = false;
+  try { wide = new URLSearchParams(location.search).get("wide") === "1"; } catch(e){}
+  if (!wide) return;
+  var st = document.createElement("style");
+  st.id = "qz-wide";
+  st.textContent = [
+    "/* 录屏模式：主内容区铺满 */",
+    ".main{max-width:none !important;}",
+    ".wrap{max-width:100% !important;}",
+    ".report-box{max-width:100% !important;}",
+    ".md-body{max-width:100% !important; font-size:14.5px !important;}",
+    ".md-body p,.md-body li{max-width:96ch;}",
+    "#qz-intro-s1,#qz-intro-s2,#qz-intro-s3,#qz-intro-s4{max-width:none !important;}"
+  ].join("\n");
+  document.head.appendChild(st);
+  document.documentElement.setAttribute("data-qz-wide","1");
+})();
+</script>
+<script>/* qz-bgm-ctl */
+(function(){
+  /* ===== [patch] ?bgm=0.6 可调背景音乐音量（录屏用） ===== */
+var QZ_BGM_VOL = (function(){
+  try {
+    var v = new URLSearchParams(location.search).get("bgm");
+    if (v === null || v === "") return 0.28;
+    var n = parseFloat(v);
+    if (isNaN(n)) return 0.28;
+    return Math.max(0, Math.min(1, n));
+  } catch(e){ return 0.28; }
+})();
+
+var a = document.getElementById('qz-bgm');
+  var b = document.getElementById('qz-sound');
+  if (!a || !b) return;
+  a.volume = 0; a.loop = true;
+  var started = false, on = false, timer = null;
+
+  function ramp(target, ms, done){
+    if (timer) clearInterval(timer);
+    var from = a.volume, t0 = Date.now();
+    timer = setInterval(function(){
+      var k = Math.min(1, (Date.now() - t0) / ms);
+      a.volume = Math.max(0, Math.min(1, from + (target - from) * k));
+      if (k >= 1){ clearInterval(timer); timer = null; if (done) done(); }
+    }, 40);
+  }
+
+  function label(){
+    b.textContent = on ? '♪ 声音 开' : '♪ 声音 关';
+    b.classList.toggle('on', on);
+  }
+
+  function play(silentFail){
+    a.volume = 0;                      /* 先置 0 再 play，避免起播瞬间以满音量"啪"一下 */
+    var p = a.play();
+    if (p && p.then){
+      p.then(function(){
+        ramp(QZ_BGM_VOL, 3200);
+        on = true; started = true; label();
+      }).catch(function(){
+        on = false; started = false; label();
+        if (!silentFail) {
+          /* 用户主动点了按钮但还是被拦：至少把状态标对，下次交互会重试 */
+        }
+      });
+    } else {
+      ramp(QZ_BGM_VOL, 3200);
+      on = true; started = true; label();
+    }
+  }
+  function pause(){
+    ramp(0, 1500, function(){
+      try { a.pause(); } catch(e){}
+    });
+    on = false; label();
+  }
+
+  b.addEventListener('click', function(e){
+    e.stopPropagation();
+    if (on) pause(); else play();
+  });
+
+  // 首次交互才启动（浏览器策略）
+  function unlock(){ start(); }
+  function start(){
+    if (started) return;
+    started = true;
+    document.removeEventListener('click', unlock, true);
+    document.removeEventListener('keydown', unlock, true);
+    play();
+  }
+  document.addEventListener('click', unlock, true);
+  document.addEventListener('keydown', unlock, true);
+
+  /* ---- 默认打开：加载后立刻尝试自动播放 ---- */
+  function autoplay(){
+    if (on) return;
+    play(true);                        /* silentFail：被拦时静默回退到首次交互 */
+  }
+  setTimeout(autoplay, 400);           /* 等 DOM 与音频元数据就绪 */
+  window.addEventListener('focus', function(){ if (!on) autoplay(); });
+  document.addEventListener('visibilitychange', function(){
+    if (!document.hidden && !on) autoplay();
+  });
+
+  // 离开开场 → 淡出
+  setInterval(function(){
+    var ov = document.getElementById('qz-intro');
+    if (!ov || ov.classList.contains('qz-intro-out')){
+      if (on) pause();
+    }
+  }, 700);
+
+  label();
+})();
+</script><script>/* qz-sfx */
+(function(){
+  var AC = null, master = null, on = true, lastRipple = -1;
+  var PERIOD = 3200;              /* 与动画里 (el % 3200) 保持一致 */
+
+  function ctx(){
+    if (AC) return AC;
+    try {
+      AC = new (window.AudioContext || window.webkitAudioContext)();
+      master = AC.createGain();
+      master.gain.value = 0.9;
+      master.connect(AC.destination);
+    } catch(e){ return null; }
+    return AC;
+  }
+
+  /* 低频鼓：正弦从 120Hz 滑到 48Hz + 一小段噪声做鼓皮 */
+  function drum(gain){
+    var a = ctx(); if (!a || !on) return;
+    var t = a.currentTime;
+    var o = a.createOscillator(), g = a.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(120, t);
+    o.frequency.exponentialRampToValueAtTime(48, t + 0.085);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain, t + 0.010);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.46);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + 0.5);
+
+    // 鼓皮：极短带通噪声
+    var n = a.createBufferSource();
+    var buf = a.createBuffer(1, a.sampleRate * 0.06, a.sampleRate);
+    var d = buf.getChannelData(0);
+    for (var i = 0; i < d.length; i++){
+      d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 4);
+    }
+    n.buffer = buf;
+    var bp = a.createBiquadFilter(), ng = a.createGain();
+    bp.type = 'bandpass'; bp.frequency.value = 180; bp.Q.value = 1.2;
+    ng.gain.value = gain * 0.55;
+    n.connect(bp); bp.connect(ng); ng.connect(master);
+    n.start(t);
+  }
+
+  /* 交互 tick：很短的高频点，几乎听不见，只给「按到了」的触感 */
+  function tick(freq, gain, dur){
+    var a = ctx(); if (!a || !on) return;
+    var t = a.currentTime;
+    var o = a.createOscillator(), g = a.createGain();
+    o.type = 'sine'; o.frequency.value = freq || 2600;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain || 0.045, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + (dur || 0.09));
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + (dur || 0.09) + 0.02);
+  }
+
+  /* 按钮：短促的双音上行，比单纯 tick 更像「确认」 */
+  function click(){
+    var a = ctx(); if (!a || !on) return;
+    tick(1900, 0.035, 0.07);
+    setTimeout(function(){ tick(2850, 0.026, 0.08); }, 42);
+  }
+
+  /* 卡片出现：很轻的 ping */
+  function ping(){ tick(3400, 0.015, 0.16); }
+
+  /* ---- 波纹鼓点：读动画时钟，检测 rp 回绕 ---- */
+  function watchRipple(){
+    var el = window.__qzEl;
+    if (typeof el !== 'number'){ return; }
+    var rp = (el % PERIOD) / PERIOD;
+    if (lastRipple >= 0 && rp < lastRipple && (lastRipple - rp) > 0.5){
+      drum(0.12);                 /* 波纹从中心出发 → 一记鼓 */
+    }
+    lastRipple = rp;
+  }
+  setInterval(watchRipple, 40);
+
+  /* ---- 交互音效 ---- */
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if (!t || !t.closest) return;
+    if (t.closest('#qz-sound')) return;          /* 静音按钮自身不响 */
+    if (t.closest('button, .qz-samples button, #qz-go, #qz-enter, #qz-skip')){
+      if (ctx() && AC.state === 'suspended') { try { AC.resume(); } catch(er){} }
+      click();
+    }
+  }, true);
+
+  /* 第二幕卡片依次亮起 → 每张一个 ping */
+  var seen = {};
+  setInterval(function(){
+    var host = document.getElementById('qz-agents');
+    if (!host) return;
+    var cards = host.querySelectorAll('.qz-agent.on');
+    for (var i = 0; i < cards.length; i++){
+      if (!seen[cards[i].id]){ seen[cards[i].id] = 1; ping(); }
+    }
+  }, 260);
+
+  /* 静音开关：与底声共用左下角那个按钮 */
+  var btn = document.getElementById('qz-sound');
+  if (btn){
+    var mo = new MutationObserver(function(){
+      on = btn.classList.contains('on');
+    });
+    mo.observe(btn, { attributes: true, attributeFilter: ['class'] });
+    on = btn.classList.contains('on');
+  }
+})();
+</script><script>/* qz-sfx2：打字 + 悬停 */
+(function(){
+  var AC = null, master = null;
+
+  function ctx(){
+    if (AC) return AC;
+    try {
+      AC = new (window.AudioContext || window.webkitAudioContext)();
+      master = AC.createGain();
+      master.gain.value = 1.0;
+      master.connect(AC.destination);
+    } catch(e){ return null; }
+    return AC;
+  }
+  function muted(){
+    var b = document.getElementById('qz-sound');
+    return !b || !b.classList.contains('on');
+  }
+  function ready(){
+    if (muted()) return null;
+    return ctx();
+  }
+
+  /* 短促的「哒」：正弦 + 一点带通噪声 */
+  function tap(freq, gain, dur){
+    var a = ready(); if (!a) return;
+    var t = a.currentTime;
+    var o = a.createOscillator(), g = a.createGain();
+    o.type = 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain, t + 0.003);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + dur + 0.02);
+
+    var n = a.createBufferSource();
+    var buf = a.createBuffer(1, Math.max(1, Math.floor(a.sampleRate * 0.02)), a.sampleRate);
+    var d = buf.getChannelData(0);
+    for (var i = 0; i < d.length; i++){
+      d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 6);
+    }
+    n.buffer = buf;
+    var bp = a.createBiquadFilter(), ng = a.createGain();
+    bp.type = 'bandpass'; bp.frequency.value = freq * 1.6; bp.Q.value = 1.6;
+    ng.gain.value = gain * 0.7;
+    n.connect(bp); bp.connect(ng); ng.connect(master);
+    n.start(t);
+  }
+
+  /* ---- ① 打字 ---- */
+  var inp = document.getElementById('qz-in');
+  if (inp){
+    inp.addEventListener('input', function(){
+      var base = 1750 * (0.88 + Math.random() * 0.24);   /* 音高 ±12% 随机 */
+      tap(base, 0.018, 0.026);
+    }, true);
+  }
+
+  /* ---- ② 开头：示例问题悬停 ---- */
+  var hovered = '';
+
+  document.addEventListener('mouseover', function(e){
+    var el = e.target;
+    if (!el || !el.closest) return;
+
+    /* 示例 chip */
+    var chip = el.closest('.qz-samples button');
+    if (chip){
+      if (hovered === chip.textContent) return;
+      hovered = chip.textContent;
+      tap(2100, 0.022, 0.05);
+      return;
+    }
+
+    /* 结尾：进入按钮 */
+    var enter = el.closest('#qz-enter, #qz-go');
+    if (enter){
+      if (hovered === '__enter__') return;
+      hovered = '__enter__';
+      tap(880,  0.030, 0.10);
+      setTimeout(function(){ tap(1320, 0.022, 0.13); }, 55);
+      return;
+    }
+
+    /* 离开上面的元素 → 允许下次再触发 */
+    if (!el.closest('.qz-samples, #qz-enter, #qz-go')) hovered = '';
+  }, true);
+
+  /* 鼠标离开按钮 / chip 时清掉标记，下次悬停还能响 */
+  document.addEventListener('mouseout', function(e){
+    var el = e.target;
+    if (!el || !el.closest) return;
+    if (el.closest('.qz-samples button') || el.closest('#qz-enter, #qz-go')) hovered = '';
+  }, true);
+})();
+</script><style id="qz-nooverflow">
+/* 诊断测得 documentElement 纵向多出 95px（会出滚动条并造成轻微位移） */
+html,body{max-width:100%;overflow-x:hidden}
+body:has(#qz-intro){overflow:hidden}
+</style><style id="qz-ff-css">
+#qz-ff{position:absolute;inset:0;display:block;pointer-events:none;z-index:2;
+  opacity:0;transition:opacity 1s ease}
+#qz-ff.on{opacity:1}
+</style>
+<script>/* qz-ff-js */
+(function(){
+  var cv=null, c=null, dpr=1, W=0, H=0;
+  var R_=Math.PI*2, N=130, ffs=[], seeded=false;
+  var t0=0, activated=false, burstDone=false, last=0;
+  var COUPLE_AT=3600, K_BEFORE=0.0, K_AFTER=5.0;
+  var mx=-9999, my=-9999, mActive=false;
+  var waves=[];                                  /* 点击脉冲 */
+
+  window.addEventListener('mousemove', function(e){
+    mx=e.clientX; my=e.clientY; mActive=true;
+  }, {passive:true});
+  window.addEventListener('mouseleave', function(){ mActive=false; mx=my=-9999; });
+
+  window.addEventListener('click', function(e){
+    if (!cv || !c) return;
+    waves.push({x:e.clientX, y:e.clientY, t:performance.now()});
+  }, true);
+
+  function mount(){
+    if (cv && cv.parentNode) return true;
+    var ov=document.getElementById('qz-intro');
+    if (!ov) return false;
+    cv=document.createElement('canvas'); cv.id='qz-ff';
+    ov.appendChild(cv); c=cv.getContext('2d');
+    resize(); window.addEventListener('resize', resize);
+    return true;
+  }
+
+  function resize(){
+    if (!cv) return;
+    var r=cv.getBoundingClientRect();
+    dpr=Math.min(2, window.devicePixelRatio||1);
+    W=Math.max(1, Math.floor(Math.max(r.width||0, window.innerWidth||0)));
+    H=Math.max(1, Math.floor(Math.max(r.height||0, window.innerHeight||0)));
+    cv.width=Math.floor(W*dpr); cv.height=Math.floor(H*dpr);
+    if (c) c.setTransform(dpr,0,0,dpr,0,0);
+    seeded=false;
+  }
+
+  function seed(){
+    if (seeded) return;
+    seeded=true; ffs=[];
+    for (var i=0;i<N;i++){
+      ffs.push({
+        x:Math.random()*W, y:Math.random()*H,
+        vx:(Math.random()-0.5)*0.22, vy:(Math.random()-0.5)*0.22,
+        ph:Math.random()*R_, w:1.60+Math.random()*0.08,
+        z:0.5+Math.random()*0.5,
+        ang:Math.random()*Math.PI, spin:(Math.random()-0.5)*1.1
+      });
+    }
+  }
+
+  function frame(now){
+    requestAnimationFrame(frame);
+    var ov=document.getElementById('qz-intro');
+    if (!ov) return;
+    if (!cv || !cv.parentNode){ if (!mount()) return; }
+
+    var s4=document.getElementById('qz-intro-s4');
+    var active=!!(s4 && s4.classList.contains('qz-on'));
+    if (!active){
+      if (activated){ activated=false; cv.classList.remove('on'); if(c) c.clearRect(0,0,W,H); }
+      return;
+    }
+    if (!activated){ activated=true; t0=now; last=now; burstDone=false; resize(); seed(); cv.classList.add('on'); }
+    seed();
+    if (W<40 || H<40) return;
+
+    var el=now-t0;
+    var dt=Math.min(0.05,(now-last)/1000); last=now;
+    if (c) c.clearRect(0,0,W,H);
+
+    var sx=0, sy=0, ax=0, ay=0;
+    for (var i=0;i<N;i++){
+      sx+=Math.cos(ffs[i].ph); sy+=Math.sin(ffs[i].ph);
+      ax+=Math.cos(2*ffs[i].ang); ay+=Math.sin(2*ffs[i].ang);
+    }
+    sx/=N; sy/=N;
+    var Rv=Math.sqrt(sx*sx+sy*sy);
+    var psi=Math.atan2(sy,sx);
+    var meanAng=(ax===0&&ay===0)?0:Math.atan2(ay,ax)/2;
+    var K=(el<COUPLE_AT)?K_BEFORE:K_AFTER;
+
+    /* 处理点击脉冲：把附近萤火虫的相位往前推一点 → 局部同步闪光 */
+    for (var wi=waves.length-1; wi>=0; wi--){
+      var wv=waves[wi], age=(now-wv.t)/1000;
+      if (age>1.2){ waves.splice(wi,1); continue; }
+      var rr=age*420;
+      for (var q=0;q<N;q++){
+        var fq=ffs[q], ddx=fq.x-wv.x, ddy=fq.y-wv.y;
+        var dd=Math.sqrt(ddx*ddx+ddy*ddy);
+        if (Math.abs(dd-rr)<70) fq.ph += 0.12;
+      }
+    }
+
+    var MOUSE_R=150, REPEL=26;
+    for (var j=0;j<N;j++){
+      var f=ffs[j];
+      f.ph += (f.w + K*Rv*Math.sin(psi-f.ph))*dt;
+      if (f.ph>R_) f.ph-=R_;
+
+      /* ① 排斥力：鼠标靠近就惊飞 */
+      if (mActive){
+        var dx=f.x-mx, dy=f.y-my;
+        var d2=dx*dx+dy*dy;
+        if (d2 < MOUSE_R*MOUSE_R && d2 > 1){
+          var d=Math.sqrt(d2);
+          var force=(1-d/MOUSE_R)*REPEL;
+          f.vx += (dx/d)*force*dt;
+          f.vy += (dy/d)*force*dt;
+        }
+      }
+      /* 阻尼：被推开后慢慢停住，再靠漂移回来 */
+      f.vx*=0.965; f.vy*=0.965;
+      var sp=Math.sqrt(f.vx*f.vx+f.vy*f.vy);
+      if (sp>6){ f.vx=f.vx/sp*6; f.vy=f.vy/sp*6; }
+      if (sp<0.06){ f.vx+=(Math.random()-0.5)*0.08; f.vy+=(Math.random()-0.5)*0.08; }
+
+      f.x+=f.vx; f.y+=f.vy;
+      if (f.x<-30) f.x=W+30; if (f.x>W+30) f.x=-30;
+      if (f.y<-30) f.y=H+30; if (f.y>H+30) f.y=-30;
+
+      /* 硬同步：锁定后把相位直接拉向群体平均相位 ψ */
+      if (K>0){
+        var dp=psi-f.ph;
+        while (dp> Math.PI) dp-=R_;
+        while (dp<-Math.PI) dp+=R_;
+        f.ph += dp * 0.9 * dt;
+        if (f.ph>R_) f.ph-=R_;
+        if (f.ph<0)  f.ph+=R_;
+      }
+
+      if (K<=0){ f.ang+=f.spin*dt; }
+      else {
+        var dA=meanAng-f.ang;
+        while (dA> Math.PI/2) dA-=Math.PI;
+        while (dA<-Math.PI/2) dA+=Math.PI;
+        f.ang += (f.spin*0.25 + dA*2.4)*dt;
+      }
+    }
+
+    if (c){
+      for (var k=0;k<N;k++){
+        var g=ffs[k];
+        var s=Math.sin(g.ph);
+        var flash=s>0?Math.pow(s,11):0;
+
+        /* ② 邻近提亮：鼠标周围 130px 内加亮 */
+        var wake=0;
+        if (mActive){
+          var wdx=g.x-mx, wdy=g.y-my;
+          var wd=Math.sqrt(wdx*wdx+wdy*wdy);
+          if (wd<130) wake=(1-wd/130)*0.55;
+        }
+
+        /* 全局脉动：同步度高时，全场叠加一个统一的亮度呼吸 */
+        var gcol = 0;
+        if (Rv > 0.75){
+          var sp2 = Math.sin(psi);
+          gcol = (sp2 > 0 ? Math.pow(sp2, 8) : 0) * Math.min(1, (Rv - 0.75) * 4) * 0.55 * g.z;
+        }
+
+        var a=0.55*g.z + flash*0.9*g.z + wake + gcol;
+        if (a<0.02) continue;
+
+        var half=((9+flash*26)*g.z)/2;
+        var ca=Math.cos(g.ang), sa=Math.sin(g.ang);
+        var x1=g.x-ca*half, y1=g.y-sa*half;
+        var x2=g.x+ca*half, y2=g.y+sa*half;
+
+        if (flash>0.05){
+          c.strokeStyle='rgba(180,130,50,'+(a*0.20).toFixed(3)+')';
+          c.lineWidth=6.5*g.z; c.lineCap='round';
+          c.beginPath(); c.moveTo(x1,y1); c.lineTo(x2,y2); c.stroke();
+        }
+        /* 深赭 → 闪时转亮金，对比更强 */
+        c.strokeStyle='rgba('+Math.round(138+90*flash)+','
+                    + Math.round(90+96*flash)+','
+                    + Math.round(22+120*flash)+','+Math.min(1,a).toFixed(3)+')';
+        c.lineWidth=(1.7+flash*0.9)*(0.85+0.3*g.z);
+        c.lineCap='round';
+        c.beginPath(); c.moveTo(x1,y1); c.lineTo(x2,y2); c.stroke();
+      }
+
+      /* 点击脉冲的可见环 */
+      for (var vi=waves.length-1; vi>=0; vi--){
+        var w2=waves[vi], age2=(now-w2.t)/1000;
+        if (age2>1.2) continue;
+        var rr2=age2*420, aa2=(1-age2/1.2)*0.30;
+        if (rr2<1) continue;
+        c.strokeStyle='rgba(200,150,70,'+aa2.toFixed(3)+')';
+        c.lineWidth=1.6;
+        c.beginPath(); c.arc(w2.x,w2.y,rr2,0,R_); c.stroke();
+      }
+
+      if (!burstDone && el>=COUPLE_AT && Rv>0.80){
+        burstDone=true;
+        var t1=now;
+        (function shock(){
+          var e=(performance.now()-t1)/700;
+          if (e>=1 || !c) return;
+          var rr3=Math.max(W,H)*0.72*Math.pow(e,0.62);
+          var aa3=(1-e)*0.42;
+          var g2=c.createRadialGradient(W/2,H/2,Math.max(0,rr3-60),W/2,H/2,Math.max(rr3+60,1));
+          g2.addColorStop(0,'rgba(250,196,86,0)');
+          g2.addColorStop(0.5,'rgba(250,196,86,'+aa3.toFixed(3)+')');
+          g2.addColorStop(1,'rgba(250,196,86,0)');
+          c.fillStyle=g2; c.fillRect(0,0,W,H);
+          requestAnimationFrame(shock);
+        })();
+      }
+    }
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+<script>/* qz-intent-demo */
+(function(){
+  function fill(){
+    if (!/[?&]intentdemo=1/.test(location.search || '')) return;
+    var box = document.getElementById('intentBox');
+    if (!box) return;
+    var map = {A:"研究问题", B:"方案比较", C:"初步想法"};
+    var d = {
+      intent: "C", clarity: 25,
+      reason: "目前是方向而非决策问题，缺少可预演的结构",
+      missing: [
+        "决策主体与对象（哪个学段/哪门课的学生、谁来实施）",
+        "成功判据（课堂参与度用什么指标衡量）",
+        "对照或约束（小游戏与问答是二选一还是都要，和什么比）"
+      ],
+      rewritten: "在某一具体课堂中，采用小游戏或课堂问答作为干预手段，能否提升学生的课堂参与度（以可观测指标衡量）？"
+    };
+    document.getElementById('intentBadge').textContent = map[d.intent];
+    document.getElementById('intentClarity').textContent = "明确度 " + d.clarity + "/100";
+    document.getElementById('intentReason').textContent = d.reason;
+    document.getElementById('intentMissing').innerHTML = "还缺这几样：<br>"
+      + d.missing.map(function(x){ return "· " + x; }).join("<br>");
+    document.getElementById('intentRewrite').value = d.rewritten;
+    box.classList.remove('hidden');
+    // 演示参数只展示卡片，不让按钮真启动会话
+    document.getElementById('intentUseBtn').onclick = function(){ box.classList.add('hidden'); };
+    document.getElementById('intentRawBtn').onclick = function(){ box.classList.add('hidden'); };
+  }
+  if (document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(fill, 300); });
+  else setTimeout(fill, 300);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>群智 · 论文库检索</title>
+<link rel="stylesheet" href="/static/qz.css">
+<style>
+  .kb-head { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .kb-head input[type=text] { flex:1; min-width:240px; }
+  .stat-row { display:flex; gap:10px; flex-wrap:wrap; margin:12px 0 4px; }
+  .row-item { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:10px 14px; flex:1; min-width:110px; }
+  .row-item .v { font-size:19px; font-weight:800; color:var(--primary); }
+  .row-item .l { font-size:11px; color:var(--dim); margin-top:2px; }
+  .hit { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin-bottom:10px; }
+  .hit .t { font-size:14px; font-weight:700; margin-bottom:6px; line-height:1.5; }
+  .hit .meta { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px; }
+  .hit .abs { font-size:12.5px; color:#4B5563; line-height:1.7; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; cursor:zoom-in; }
+  .hit .abs.expanded { display:block; -webkit-line-clamp:unset; overflow:visible; cursor:zoom-out; }
+  .hit .abs::after { content:" …点击展开"; color:var(--dim); font-size:11px; }
+  .hit .abs.expanded::after { content:" 点击收起"; }
+  .pill.zero { color:#B23B2E; border-color:#F0D3CC; background:#FDF5F3; }
+  .trunc { margin:8px 0 14px; padding:9px 12px; border:1px dashed var(--border); border-radius:9px;
+           background:var(--card2); font-size:12.5px; color:var(--dim); line-height:1.7; }
+  .hit .act { margin-top:8px; }
+  .drawer { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; margin-top:14px; }
+  .issue { background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:9px 11px; margin-bottom:7px; font-size:12.5px; line-height:1.65; }
+</style>
+</head>
+<body>
+<div class="qz-top">
+  <div class="qz-title"><span class="qz-logo">群智</span> · 论文库 <span class="qz-badge" id="kbBadge">59.5 万篇</span></div>
+  <div><a class="qz-link" href="/tools">能力平台</a></div>
+</div>
+
+<div class="qz-wrap">
+  <div class="qz-card">
+    <h3>🔎 检索论文（标题/摘要）</h3>
+    <div class="kb-head">
+      <input id="q" type="text" placeholder="输入关键词，如 graph neural network / clipping / diffusion">
+      <select id="field"><option value="">全部领域</option></select>
+      <select id="year"><option value="">全部年份</option></select>
+      <select id="decision"><option value="">全部决策</option><option value="Accept">Accept</option><option value="Reject">Reject</option></select>
+      <button class="qz-btn" id="go">检索</button>
+    </div>
+    <div class="stat-row" id="stats"></div>
+    <div class="qz-muted" id="statsCall" style="margin-top:6px"></div>
+    <div class="qz-muted" id="hint" style="margin-top:6px">库里含从真实评审抽取的问题线索（规则抽取，未逐条人工核验），可用于对照「我们报的问题 vs 审稿人报的问题」。</div>
+  </div>
+
+  <div id="list"></div>
+  <div id="detail" class="drawer" style="display:none"></div>
+</div>
+
+<script src="/static/qz.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+qz.boot();
+
+async function loadStats() {
+  try {
+    const j = await (await fetch("/api/kb/stats")).json();
+    // BUG-001/002：页头库规模与页内统计条都来自同一个 /api/kb/stats，不再写死。
+    const badge = $("kbBadge");
+    if (badge) badge.textContent = qz.wan(j.papers) + "篇";
+    $("stats").innerHTML = `
+      <div class="row-item"><div class="v">${(j.papers||0).toLocaleString()}</div><div class="l">论文</div></div>
+      <div class="row-item"><div class="v">${(j.reviews||0).toLocaleString()}</div><div class="l">评审</div></div>
+      <div class="row-item"><div class="v">${(j.issues||0).toLocaleString()}</div><div class="l">问题点</div></div>
+      <div class="row-item"><div class="v">${qz.num(j.db_mb)}</div><div class="l">库大小(MB)</div></div>`;
+    // BUG-005：库规模数字旁展示 call_id，可点开回放。
+    $("statsCall").innerHTML = "库规模口径：" + qz.esc(qz.wan(j.papers)) + "篇（" +
+      qz.num(j.papers) + "）· 有全文 " + qz.esc(qz.wan(j.fulltext)) + "篇 · 有特征 " +
+      qz.esc(qz.wan(j.features_papers)) + "篇 " + qz.callBadge(j, "库统计");
+    const yf = $("year"), ff = $("field");
+    (j.years||[]).forEach(y => yf.insertAdjacentHTML("beforeend", `<option value="${y}">${y}</option>`));
+    (j.fields||[]).forEach(f => { if (f) ff.insertAdjacentHTML("beforeend", `<option value="${f}">${f}</option>`); });
+  } catch (e) { $("stats").innerHTML = '<span class="qz-muted">统计加载失败</span>'; }
+}
+loadStats();
+
+$("go").onclick = search;
+$("q").onkeydown = (e) => { if (e.key === "Enter") search(); };
+$("list").addEventListener("click", (e) => {
+  // Bug7：不用内联 onclick（pid 里的引号会被 HTML 实体解码打断）；
+  // 统一事件委托 + data-pid，保证「查看问题点」一定能点开。
+  const issueBtn = e.target.closest(".js-issue");
+  if (issueBtn) {
+    e.preventDefault();
+    showPaper(issueBtn.dataset.pid);
+    return;
+  }
+  const a = e.target.closest(".abs");
+  if (!a) return;
+  a.classList.toggle("expanded");
+});
+
+async function search() {
+  const body = { q: $("q").value.trim(), field: $("field").value, year: $("year").value,
+                 decision: $("decision").value, limit: 20 };
+  $("list").innerHTML = '<div class="qz-muted">检索中…</div>';
+  try {
+    // QBUG-007（部分）：key 走请求头，不再拼进 URL / Referer / 访问日志
+    const r = await fetch("/api/kb/search", {
+      method: "POST", headers: { "Content-Type": "application/json", "X-Access-Key": "__QZ_DEMO_KEY__" },
+      body: JSON.stringify(body) });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.detail || ("HTTP " + r.status));
+    if (!j.items.length) { $("list").innerHTML = '<div class="qz-muted">没有匹配结果，换个关键词试试</div>'; return; }
+    const truncated = j.total > j.returned;
+    $("hint").innerHTML = `命中 ${j.total.toLocaleString()} 篇，展示前 ${j.returned} 篇 ` +
+      qz.callBadge(j, "本次检索") +
+      (truncated ? `　<span style="color:#B7791F">其余 ${(j.total - j.returned).toLocaleString()} 篇未展示</span>` : "");
+    const zeroN = j.items.filter(it => !it.n_issues).length;
+    const trunc = truncated || zeroN
+      ? `<div class="trunc">${truncated ? `本页只展示前 ${j.returned} 篇（接口单次上限 50 条，页面当前 20 条），没有翻页；请用更精确的关键词，或加领域/年份过滤缩小范围。` : ""}${zeroN ? `${zeroN ? "　" : ""}其中 <b>${zeroN}</b> 篇没有抽取到评审线索（已标红）；这不等于论文有问题，仍可点「读原文」自己核对。` : ""}</div>`
+      : "";
+    $("list").innerHTML = trunc + j.items.map(it => `
+      <div class="hit">
+        <div class="t">${qz.esc(it.title)}</div>
+        <div class="meta">
+          ${it.venue ? `<span class="pill">${qz.esc(it.venue)}</span>` : ""}
+          ${it.year ? `<span class="pill">${it.year}</span>` : ""}
+          ${it.field ? `<span class="pill">${qz.esc(it.field)}</span>` : ""}
+          ${it.decision ? `<span class="pill ${it.decision === "Accept" ? "on" : "warn"}">${it.decision}</span>` : ""}
+          ${it.n_issues
+            ? `<span class="pill">${it.n_issues} 条评审线索</span>`
+            : `<span class="pill zero" title="库内没有该篇的评审线索">无评审线索</span>`}
+        </div>
+        <div class="abs" title="点击展开/收起摘要">${qz.esc(it.abstract || "（无摘要）")}</div>
+        <div class="act">
+          <a class="qz-btn" href="/read?pid=${encodeURIComponent(it.pid)}&biz=3" target="_blank" rel="noopener">读原文 ↗</a>
+          <button class="qz-btn qz-ghost js-issue" type="button" data-pid="${qz.esc(it.pid)}" title="展开这篇论文的评审问题线索">查看问题点 →</button>
+        </div>
+      </div>`).join("");
+  } catch (e) {
+    $("list").innerHTML = `<div class="qz-muted">检索失败：${qz.esc(e.message)}</div>`;
+  }
+}
+
+async function showPaper(pid) {
+  try { localStorage.setItem("qz.pid", pid); } catch (e) {}
+  if (window.QZNav) QZNav.refresh();
+  const d = $("detail");
+  d.style.display = "block";
+  d.innerHTML = '<div class="qz-muted">加载中…</div>';
+  try {
+    const j = await (await fetch(`/api/kb/paper/${encodeURIComponent(pid)}?issues=12`, {
+      headers: { "X-Access-Key": "__QZ_DEMO_KEY__" } })).json();
+    const p = j.paper || {};
+    const issues = p.issues || [];
+    const evHref = "/evidence?pid=" + encodeURIComponent(pid) + "&line=3&auto=1";
+    d.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <h3 style="margin:0">${qz.esc(p.title || "")}</h3>
+        <span class="pill">${issues.length} 条评审问题线索</span>
+      </div>
+      <div class="qz-muted" style="margin:8px 0 10px">${qz.esc(p.venue || "")} ${p.year || ""}｜${qz.esc(p.field || "")}｜${p.decision || ""}｜${p.n_chars || "-"} 字 ${qz.callBadge(j, "本篇")}</div>
+      <div class="qz-muted" style="margin-bottom:8px">审稿人评审中抽取的问题线索（前 12 条，可用于对照）：</div>
+      ${issues.map(x => `<div class="issue">${qz.esc(x.text)}</div>`).join("") ||
+        '<div class="qz-muted">该篇库内暂无评审问题线索；可到证据页按全文重新生成带锚点的问题清单。</div>'}
+      <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+        <a class="qz-btn qz-ghost" href="${evHref}" target="_blank" rel="noopener">查看完整问题点/证据页 ↗</a>
+        <a class="qz-btn qz-ghost" href="/read?pid=${encodeURIComponent(pid)}&biz=3" target="_blank" rel="noopener">读原文 ↗</a>
+      </div>`;
+    d.scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (e) { d.innerHTML = `<div class="qz-muted">加载失败：${qz.esc(e.message)}</div>`; }
+}
+// 兼容旧的内联调用 / 控制台调试
+window.showPaper = showPaper;
+</script>
+<script src="/static/qz-nav.js"></script>
+</body>
+</html>

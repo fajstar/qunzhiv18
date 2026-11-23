@@ -1,0 +1,221 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>群智 · 一键体验</title>
+<style>
+:root { --primary:#2563EB; --primary-light:#DBEAFE; --accent:#0EA5E9;
+  --bg:#FAF6F0; --card:#FFFFFF; --card2:#F5F0E8; --border:#EAE3D8;
+  --text:#1F2937; --dim:#6B7280; --green:#059669; --warn:#D97706; --danger:#DC2626;
+  --shadow:0 2px 8px rgba(31,41,55,.05); }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Microsoft YaHei','PingFang SC',system-ui,sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+.topbar { display:flex; align-items:center; justify-content:space-between; padding:14px 24px; background:var(--card); border-bottom:1px solid var(--border); box-shadow:var(--shadow); }
+.topbar h1 { font-size:18px; display:flex; align-items:center; gap:10px; }
+.logo { color:var(--primary); font-weight:800; }
+.badge { font-size:11px; background:var(--primary-light); color:var(--primary); padding:3px 10px; border-radius:14px; font-weight:600; }
+.wrap { max-width:960px; margin:0 auto; padding:24px; }
+.card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px; margin-bottom:16px; box-shadow:var(--shadow); }
+.card h3 { font-size:15px; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+.hero { text-align:center; padding:10px 0 6px; }
+.hero .t { font-size:22px; font-weight:800; color:var(--primary); margin-bottom:6px; }
+.hero .s { color:var(--dim); font-size:13px; line-height:1.7; }
+.preset-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:10px; }
+.preset-card { background:var(--card2); border:1px solid var(--border); border-radius:10px; padding:14px; cursor:pointer; transition:all .15s; }
+.preset-card:hover { border-color:var(--primary); background:var(--primary-light); }
+.preset-card .t { font-size:14px; font-weight:700; margin-bottom:6px; line-height:1.5; }
+.preset-card .d { font-size:12px; color:var(--dim); }
+.preset-card .go { margin-top:10px; font-size:12px; color:var(--primary); font-weight:700; }
+.log-area { max-height:300px; overflow-y:auto; }
+.log-item { padding:6px 10px; border-left:3px solid var(--border); margin-bottom:4px; font-size:12.5px; line-height:1.5; border-radius:0 6px 6px 0; }
+.log-item.system { border-left-color:var(--primary); color:var(--dim); }
+.log-item.step { border-left-color:var(--accent); background:var(--card2); }
+.log-item.done { border-left-color:var(--green); color:var(--green); font-weight:600; }
+.log-item.warn { border-left-color:var(--warn); background:#FEF3E2; }
+.dim-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+.dim-box { background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:8px 12px; text-align:center; flex:1; min-width:90px; }
+.dim-box .v { font-size:19px; font-weight:800; color:var(--primary); }
+.dim-box .l { font-size:11px; color:var(--dim); margin-top:2px; }
+.rep { white-space:pre-wrap; line-height:1.85; font-size:13.5px; overflow-wrap:anywhere; max-height:460px; overflow-y:auto; }
+.concl { background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:10px; margin-bottom:8px; font-size:13px; line-height:1.7; }
+.btn { background:var(--primary); color:#fff; border:none; padding:10px 18px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; }
+.btn:hover{background:#1D4ED8} .btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-ghost { background:transparent; border:1px solid var(--border); color:var(--dim); }
+.btn-ghost:hover{color:var(--primary);border-color:var(--primary)}
+.loading { color:var(--primary); font-size:13px; animation:pulse 1.5s infinite; }
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.hidden { display:none; }
+.muted { color:var(--dim); font-size:12px; }
+@media (max-width:768px){
+  .topbar{padding:12px 16px} .topbar h1{font-size:16px}
+  .wrap{padding:14px} .card{padding:14px}
+  .hero .t{font-size:18px}
+  .preset-grid{grid-template-columns:1fr}
+  .rep{font-size:14px}
+}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <h1><span class="logo">群智</span> · 一键体验 <span class="badge">v15</span></h1>
+  <div class="muted"><a href="/" style="color:var(--primary);text-decoration:none">进入完整控制台 →</a></div>
+</div>
+
+<div class="wrap">
+  <div class="card hero">
+    <div class="t">不是人问 AI 答，而是 AI 团队替你预演决策</div>
+    <div class="s">6 个不同专业/性格的 AI 成员，信息不对称下多轮讨论 + 主教练联网补料 + 三评审打分。<br>
+      选一个题目，点一下，看他们吵完给你一份报告。</div>
+  </div>
+
+  <div class="card" id="pickCard">
+    <h3>① 选一个题目（也可自己写）</h3>
+    <div class="preset-grid" id="presets"></div>
+    <div style="margin-top:12px">
+      <input id="custom" type="text" style="width:100%;background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px"
+             placeholder="或输入你自己的决策问题，例如：该不该让学生用 AI 做作业？">
+      <div style="margin-top:10px"><button class="btn" id="goCustom">用我的题目开始</button></div>
+    </div>
+  </div>
+
+  <div class="card hidden" id="logCard">
+    <h3>② 预演进行中</h3>
+    <div class="dim-row" id="dims"></div>
+    <div class="log-area" id="log"></div>
+  </div>
+
+  <div class="card hidden" id="resCard">
+    <h3>③ 报告</h3>
+    <div class="dim-row" id="resDims"></div>
+    <div id="concl"></div>
+    <div style="margin:10px 0"><button class="btn-ghost btn" id="shareBtn">生成分享链接</button>
+      <button class="btn-ghost btn" id="rawBtn">看完整报告</button></div>
+    <div class="rep hidden" id="rep"></div>
+    <div class="muted" id="shareBox" style="margin-top:10px"></div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+// QBUG-014：接口文本一律转义后再进 innerHTML（同站 /v18 与 qz.esc 的正确做法）
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const KEY = "__QZ_DEMO_KEY__";           // 体验页内置（页面不显示）；判分/限流由后端 guard 负责
+const HKEY = { "X-Access-Key": KEY };  // QBUG-007（部分）：key 走请求头，不拼进 URL
+let curTopic = "", curSession = "";
+
+function log(msg, cls) {
+  const d = document.createElement("div");
+  d.className = "log-item " + (cls || "step");
+  d.textContent = msg;
+  $("log").appendChild(d);
+  $("log").scrollTop = $("log").scrollHeight;
+}
+
+fetch("/api/demo/presets", { headers: HKEY }).then(r => r.json()).then(j => {
+  $("presets").innerHTML = (j.presets || []).map(p => `
+    <div class="preset-card" data-topic="${encodeURIComponent(p.t)}" data-sc="${esc(p.scenario)}">
+      <div class="t">${esc(p.t)}</div><div class="d">${esc(p.d)}</div><div class="go">点我开始 →</div>
+    </div>`).join("");
+  document.querySelectorAll(".preset-card").forEach(c => {
+    c.onclick = () => start(decodeURIComponent(c.dataset.topic), c.dataset.sc);
+  });
+}).catch(() => { $("presets").innerHTML = '<div class="muted">预设题加载失败，可直接输入题目</div>'; });
+
+$("goCustom").onclick = () => {
+  const t = $("custom").value.trim();
+  if (t.length < 6) { alert("题目太短，至少 6 个字"); return; }
+  start(t, "教研");
+};
+
+async function start(topic, scenario) {
+  curTopic = topic;
+  $("pickCard").classList.add("hidden");
+  $("logCard").classList.remove("hidden");
+  $("resCard").classList.add("hidden");
+  $("log").innerHTML = "";
+  log("① 主教练联网检索（中文学术源）…", "step");
+  setTimeout(() => log("② 6 人团队开始讨论（信息不对称）…", "step"), 6000);
+  setTimeout(() => log("③ 三评审打分（锚点必须可核对）…", "step"), 30000);
+  const t0 = Date.now();
+  try {
+    const r = await fetch(`/api/sandbox/start`, {
+      method: "POST", headers: { "Content-Type": "application/json", ...HKEY },
+      body: JSON.stringify({ topic, user_thought: "", max_rounds: 3, info_mode: "coach_search",
+                             scenario, allow_web: false })
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.detail || ("HTTP " + r.status));
+    curSession = j.session_id;
+    const meta = j.search_meta || {};
+    $("dims").innerHTML = `
+      <div class="dim-box"><div class="v">${meta.injected_count ?? "-"}</div><div class="l">检索注入</div></div>
+      <div class="dim-box"><div class="v">3</div><div class="l">讨论轮次</div></div>
+      <div class="dim-box"><div class="v">6</div><div class="l">团队成员</div></div>
+      <div class="dim-box"><div class="v" id="elapsed">0</div><div class="l">已用(秒)</div></div>`;
+    log(`✔ 已启动：${topic}`, "done");
+    const timer = setInterval(() => {
+      const e = $("elapsed"); if (e) e.textContent = Math.round((Date.now() - t0) / 1000);
+    }, 1000);
+    poll(timer, t0);
+  } catch (e) {
+    log("✘ 启动失败：" + e.message, "warn");
+    $("pickCard").classList.remove("hidden");
+  }
+}
+
+async function poll(timer, t0) {
+  let tries = 0;
+  while (tries++ < 120) {
+    await new Promise(r => setTimeout(r, 5000));
+    try {
+      const r = await fetch(`/api/sandbox/result/${encodeURIComponent(curSession)}`, { headers: HKEY });
+      const j = await r.json();
+      if (j.status === "done") {
+        clearInterval(timer);
+        const sec = Math.round((Date.now() - t0) / 1000);
+        log(`✔ 预演完成，用时 ${sec} 秒`, "done");
+        render(j, sec);
+        return;
+      }
+      if (j.status === "failed") { clearInterval(timer); log("✘ 预演失败", "warn"); return; }
+      if (tries % 6 === 0) log(`…仍在进行（已 ${Math.round((Date.now() - t0) / 1000)} 秒）`, "system");
+    } catch (e) { /* 忽略单次失败 */ }
+  }
+  clearInterval(timer); log("✘ 超时（10 分钟）", "warn");
+}
+
+function render(j, sec) {
+  $("logCard").classList.add("hidden");
+  $("resCard").classList.remove("hidden");
+  const cards = j.cards || [];
+  const rep = j.report || j.human_report || "";
+  const em = j.emergence || {};
+  $("resDims").innerHTML = `
+    <div class="dim-box"><div class="v">${sec}</div><div class="l">耗时(秒)</div></div>
+    <div class="dim-box"><div class="v">${rep.length}</div><div class="l">报告字数</div></div>
+    <div class="dim-box"><div class="v">${cards.length}</div><div class="l">关键结论</div></div>
+    <div class="dim-box"><div class="v">${(em.score ?? em.value ?? "-")}</div><div class="l">涌现分</div></div>`;
+  $("concl").innerHTML = cards.length
+    ? cards.slice(0, 8).map(c => `<div class="concl">${esc(typeof c === "string" ? c : (c.text || c.title || JSON.stringify(c)))}</div>`).join("")
+    : '<div class="muted">（无结构化结论卡片，请看完整报告）</div>';
+  $("rep").textContent = rep;
+  $("rawBtn").onclick = () => $("rep").classList.toggle("hidden");
+  $("shareBtn").onclick = async () => {
+    let url = location.origin + "/r/" + encodeURIComponent(curSession);
+    try {
+      const r = await fetch(`/api/share`, { method: "POST", headers: { "Content-Type": "application/json", ...HKEY },
+        body: JSON.stringify({ session_id: curSession }) });
+      const j = await r.json();
+      if (r.ok && j.url) url = location.origin + j.url;
+    } catch (e) {}
+    $("shareBox").innerHTML = `分享链接（只读、脱敏）：<a href="${esc(url)}" target="_blank" style="color:var(--primary)">${esc(url)}</a>
+      <button class="btn btn-ghost" style="margin-left:8px;font-size:12px;padding:5px 10px" id="copyShare">复制</button>`;
+    $("copyShare").onclick = async () => { await navigator.clipboard.writeText(url); $("copyShare").textContent = "已复制"; };
+  };
+}
+</script>
+</body>
+</html>
+
+

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>评测面板 · 群智</title>
+<link rel="stylesheet" href="/static/wb.css">
+<style>
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+  .big{font-family:var(--mono);font-size:30px;font-weight:800;line-height:1.1}
+  .cardx{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px}
+  .note{font-size:12px;color:var(--dim);margin-top:6px}
+</style>
+</head>
+<body>
+<div class="page" style="max-width:1080px;margin:0 auto">
+  <div class="page-head">
+    <h1>评测面板</h1>
+    <div class="lead">这是我们的硬数字：120 篇正式评测、基线规则对照、NLI 标定。每条都可复算。</div>
+    <div id="evalCall" class="note" style="margin-top:8px"></div>
+  </div>
+  <div id="kpi" class="grid2"></div>
+  <div class="card" style="margin-top:16px" id="anchorByField">
+    <h3>锚定率 · 分领域（100 篇实测）</h3>
+    <div id="fieldBody" class="hint">加载中…</div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h3>口径说明</h3>
+    <div class="hint">
+      · 覆盖率 = 评审线索类别中，被我们问题覆盖的比例（类别级）<br>
+      · 单条命中率 = 我们报出的条目里，类别与人类一致的占比<br>
+      · 锚定率 = 条目依据能在原文逐字找到（T1 ≥40 字 / T2 cov20）<br>
+      · 基线规则对照 = 加入“同行普遍做法”判定后，条目与覆盖的变化
+    </div>
+  </div>
+</div>
+<script>
+const $ = s => document.querySelector(s);
+const num = (n,d=1) => n==null?"—":(typeof n==="number"? (Math.round(n*10**d)/10**d) : n);
+async function main(){
+  const j = await (await fetch("/api/eval", {cache:"no-store"})).json();
+  // 2026-11-22 BUG-005：本页数字旁展示 call_id，点开可回放原始 JSON。
+  const cb = document.getElementById("evalCall");
+  if (cb && j.call_id) {
+    cb.innerHTML = "本页数据 call_id：" +
+      '<a class="call-badge" href="/api/call/' + encodeURIComponent(j.call_id) +
+      '" target="_blank" rel="noopener" title="call_id: ' + j.call_id +
+      ' · 点击回放">' + j.call_id + "</a>" +
+      '　快照：' + (j.data_snapshot || "—") + '　计算于：' + (j.computed_at || "—");
+  }
+  const e = j.eval120 || {};
+  const b = j.baseline_rules || {};
+  const n = j.nli_bench || {};
+  const cards = [
+    ["120 篇评测 · 覆盖率", (e.coverage!=null? e.coverage+"%":"—"), "类别级，Accept/Reject 分开算"],
+    ["单条命中率", (e.hit_rate!=null? e.hit_rate+"%":"—"), "条目类别与人类一致"],
+    ["锚定率", (e.anchor!=null? e.anchor+"%":"—"), "T1 ≥40 字逐字 / T2 cov20"],
+    ["锚定率 · 100 篇实测", (j.anchor_eval&&j.anchor_eval.anchor_rate!=null? (j.anchor_eval.anchor_rate*100).toFixed(1)+"%":"—"), "100 篇 / "+(j.anchor_eval?j.anchor_eval.n_items:"—")+" 条问题，逐条定位回原文"],
+    ["基线规则 · 精度", (b.before? b.before.hit_rate+"% → "+b.after.hit_rate+"%":"—"), "处理后单条命中率变化"],
+    ["基线规则 · 覆盖率", (b.before? b.before.coverage+"% → "+b.after.coverage+"%":"—"), "处理后类别覆盖变化"],
+    ["NLI 标定", (n.accuracy? (n.accuracy*100).toFixed(0)+"%":"—"), "200 组标注对，AUC " + (n.auc??"—")],
+  ];
+  $("#kpi").innerHTML = cards.map(([t,v,d])=>`
+    <div class="cardx"><div class="note">${t}</div>
+    <div class="big">${v}</div><div class="note">${d}</div></div>`).join("");
+  // 分领域锚定率表
+  const af = (j.anchor_eval && j.anchor_eval.by_field) || {};
+  const ks = Object.keys(af).sort((a,b)=>(af[b].n||0)-(af[a].n||0));
+  if (!ks.length) {
+    $("#fieldBody").textContent = "暂无分领域数据";
+  } else {
+    const rows = ks.map(k => {
+      const v = af[k] || {};
+      const pct = v.rate!=null ? (v.rate*100).toFixed(1)+"%" : "—";
+      const bar = v.rate!=null ? Math.round(v.rate*100) : 0;
+      return `<tr>
+        <td style="font-family:var(--mono);font-size:12px">${k}</td>
+        <td style="font-family:var(--mono);text-align:right">${v.n||0}</td>
+        <td style="font-family:var(--mono);text-align:right">${v.anch||0}</td>
+        <td style="text-align:right;font-weight:600">${pct}</td>
+        <td><div style="height:7px;background:#EDE7DD;border-radius:4px;overflow:hidden">
+          <div style="height:100%;width:${bar}%;background:var(--accent)"></div></div></td>
+      </tr>`;
+    }).join("");
+    $("#fieldBody").innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="text-align:left;color:var(--dim);font-size:12px">
+        <th style="padding:6px 8px">领域</th>
+        <th style="padding:6px 8px;text-align:right">条数</th>
+        <th style="padding:6px 8px;text-align:right">锚定</th>
+        <th style="padding:6px 8px;text-align:right">锚定率</th>
+        <th style="padding:6px 8px;width:120px">分布</th>
+      </tr></thead><tbody>${rows}</tbody></table>
+      <div class="note" style="margin-top:8px">
+        样本：${(j.anchor_eval&&j.anchor_eval.n_papers)||"—"} 篇论文（随机抽样，cs.* 有全文），
+        每篇 8 条问题；锚定 = 该条依据能在原文定位到具体句子。
+        生成时间：${(j.anchor_eval&&j.anchor_eval.generated_at)||"—"}
+      </div>`;
+  }
+}
+main();
+</script>
+<script src="/static/qz-nav.js"></script>
+</body>
+</html>

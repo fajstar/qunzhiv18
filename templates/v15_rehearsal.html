@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>v15 决策预演（重构版）· 群智</title>
+<link rel="stylesheet" href="/static/wb.css">
+<style>
+  .sec{margin-top:16px}
+  .rule{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:#fff}
+  .rule .m{font-family:var(--mono);color:var(--accent);font-size:12px}
+  .tag2{display:inline-block;background:var(--paper-2);border:1px solid var(--line);border-radius:999px;
+        padding:1px 8px;font-size:11.5px;color:var(--ink-2);margin-right:6px}
+</style>
+</head>
+<body>
+<div class="page" style="max-width:1000px;margin:0 auto">
+  <div class="page-head">
+    <h1>决策预演 · 重构版</h1>
+    <div class="lead">立场×证据矩阵 → 可证伪规则 + 分歧点 + 引用。只接受计算机/机器学习领域问题。</div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <input id="q" type="text" placeholder="决策问题，如：是否在投稿前用 LLM 自检修稿" value="是否在论文投稿前用 LLM 做自检修稿">
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <input id="bg" type="text" placeholder="背景/约束（可选）" style="flex:2" value="目标：减少可核验问题；约束：单篇≤0.2元">
+        <select id="field" style="flex:1">
+          <option value="cs.CL">cs.CL</option><option value="cs.LG">cs.LG</option>
+          <option value="cs.CV">cs.CV</option><option value="cs.AI">cs.AI</option>
+          <option value="">全 CS</option>
+        </select>
+        <button class="btn accent" id="go">开始预演</button>
+      </div>
+    </div>
+    <div id="status" class="hint" style="margin-top:10px"></div>
+  </div>
+
+  <div id="out" style="display:none">
+    <div class="card sec"><h3>一、建议</h3><div id="rec"></div></div>
+    <div class="card sec"><h3>二、可证伪规则</h3><div id="rules"></div></div>
+    <div class="card sec"><h3>三、分歧点</h3><div id="dis"></div></div>
+    <div class="card sec"><h3>四、未验证项</h3><div id="unv"></div></div>
+    <div class="card sec"><h3>五、立场与引用</h3><div id="stances"></div></div>
+    <div class="card sec"><h3>六、主教练干预（3 触发）</h3><div id="trig"></div></div>
+    <div class="card sec"><h3>七、证据表</h3><div id="ev"></div></div>
+  </div>
+</div>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+$("#go").onclick = async () => {
+  const q = $("#q").value.trim();
+  if(!q){ alert("请输入问题"); return; }
+  $("#status").innerHTML = '<span class="spin"></span> 预演中（约 30–60 秒）…';
+  $("#out").style.display = "none";
+  try{
+    const r = await fetch("/api/v15/rehearse?key=__QZ_DEMO_KEY__", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({question:q, bg:$("#bg").value, field:$("#field").value})
+    });
+    const j = await r.json();
+    if(!r.ok) throw new Error(j.detail || ("HTTP "+r.status));
+    if(!j.ok) throw new Error(j.error || "失败");
+    $("#out").style.display = "block";
+    $("#rec").textContent = j.recommendation || "—";
+    $("#rules").innerHTML = (j.rules||[]).map(x=>`
+      <div class="rule"><div class="m">${esc(x.metric)}</div>
+      <div>阈值：${esc(x.threshold)} → 动作：${esc(x.action)}</div>
+      <div class="hint" style="margin:4px 0 0">失效条件：${esc(x.invalidate)}</div></div>`).join("") || "—";
+    $("#dis").innerHTML = (j.disagreements||[]).map(x=>`
+      <div class="rule"><b>${esc(x.stance)}</b>：${esc(x.point)}
+      <div class="hint" style="margin:4px 0 0">需要：${esc(x.needs)}</div></div>`).join("") || "—";
+    $("#unv").innerHTML = "<ul>"+((j.unverified||[]).map(x=>`<li>${esc(x)}</li>`).join("") || "<li>—</li>")+"</ul>";
+    $("#stances").innerHTML = (j.stances||[]).map(s=>`
+      <div class="rule"><span class="tag2">${esc(s.id)} ${esc(s.name)}</span>
+      ${s.verified ? '<span class="tag2" style="color:var(--ok)">已引用</span>' : '<span class="tag2" style="color:var(--bad)">未核验</span>'}
+      <div>${esc(s.claim)}</div>
+      <div class="hint" style="margin:4px 0 0">引用：${(s.evidence_ids||[]).join(",") || "无"}｜置信 ${s.confidence}</div></div>`).join("");
+    $("#trig").innerHTML = (j.coach_triggers||[]).map(t=>`
+      <div class="rule"><b>${esc(t.type)}</b>：${esc(t.detail)}</div>`).join("") || "无触发";
+    $("#ev").innerHTML = "<table class='t'><thead><tr><th>ID</th><th>年份</th><th>领域</th><th>标题</th></tr></thead><tbody>"+
+      (j.citations||[]).map(e=>`<tr><td>${esc(e.id)}</td><td>${esc(e.year)}</td><td>${esc(e.field)}</td><td>${esc((e.title||"").slice(0,80))}</td></tr>`).join("")+
+      "</tbody></table>";
+    $("#status").textContent = `完成｜未核验主张 ${j.unverified_claims}/${(j.stances||[]).length}｜${j.at}`;
+  }catch(e){
+    $("#status").textContent = "失败：" + e.message;
+  }
+};
+</script>
+</body>
+</html>

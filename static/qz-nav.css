@@ -1,0 +1,113 @@
+/* 群智 · 统一业务线导航（面包屑 + 底栏）
+   设计：宣纸底 #FAF6F0 / 墨色 #15181D / 朱砂 #C2402B
+   只使用 qzn- 前缀，避免与各页 qz-/wb- 样式冲突。 */
+
+html.qzn-has-foot body{padding-bottom:88px}
+@media(max-width:760px){html.qzn-has-foot body{padding-bottom:132px}}
+
+/* ---------- 顶部面包屑 ---------- */
+.qzn-crumb{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding:7px 22px;background:#fff;border-bottom:1px solid #E6E1D8;
+  font:12px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  color:#8A9099;position:relative;z-index:60;
+}
+.qzn-crumb a{color:#4A5158;text-decoration:none}
+.qzn-crumb a:hover{color:#C2402B}
+.qzn-crumb .qzn-brand{font-weight:800;color:#C2402B;letter-spacing:.04em}
+.qzn-crumb .qzn-sep{color:#C9C2B6;font-family:"JetBrains Mono",Consolas,monospace}
+.qzn-crumb .qzn-cur{color:#15181D;font-weight:600}
+.qzn-crumb .qzn-stepno{
+  margin-left:auto;font-family:"JetBrains Mono",Consolas,monospace;font-size:11px;
+  background:#F6E7E3;color:#C2402B;border-radius:999px;padding:2px 10px;white-space:nowrap;
+}
+@media(max-width:760px){
+  .qzn-crumb{padding:6px 14px;font-size:11.5px;gap:6px}
+  .qzn-crumb .qzn-stepno{margin-left:0;order:9}
+}
+
+/* ---------- 移动端菜单按钮 + 面板（QBUG-002） ---------- */
+.qzn-burger{
+  display:none;margin-left:auto;align-items:center;gap:4px;
+  border:1px solid #E6E1D8;background:#fff;color:#4A5158;border-radius:8px;
+  padding:4px 9px;font-size:12px;line-height:1.5;cursor:pointer;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+}
+.qzn-burger:hover{border-color:#C2402B;color:#C2402B}
+.qzn-burger[aria-expanded="true"]{background:#F6E7E3;border-color:#C2402B;color:#C2402B}
+@media(max-width:760px){.qzn-burger{display:inline-flex}}
+
+.qzn-menu{
+  position:fixed;top:40px;right:10px;left:10px;max-width:360px;margin-left:auto;
+  z-index:130;background:#fff;border:1px solid #E6E1D8;border-radius:12px;
+  box-shadow:0 18px 48px rgba(21,24,29,.18);padding:8px;
+}
+.qzn-menu[hidden]{display:none}
+.qzn-menu-h{font-size:10.5px;letter-spacing:.18em;color:#8A9099;padding:6px 10px 8px}
+.qzn-menu-grid{display:grid;gap:2px}
+.qzn-menu-grid a{
+  display:block;padding:8px 10px;border-radius:8px;text-decoration:none;color:#15181D;
+}
+.qzn-menu-grid a:hover,.qzn-menu-grid a:focus{background:#F6E7E3;outline:none}
+.qzn-menu-grid a b{display:block;font-size:13.5px;font-weight:700}
+.qzn-menu-grid a span{display:block;font-size:11px;color:#8A9099;margin-top:1px}
+
+/* ---------- 底部步骤导航 ---------- */
+.qzn-foot{
+  position:fixed;left:0;right:0;bottom:0;z-index:95;
+  background:rgba(250,246,240,.97);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  border-top:1px solid #E6E1D8;box-shadow:0 -6px 24px rgba(21,24,29,.06);
+}
+.qzn-foot-in{
+  max-width:1120px;margin:0 auto;padding:10px 20px;
+  display:flex;align-items:center;gap:12px;
+}
+.qzn-btn{
+  display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+  border-radius:10px;padding:9px 16px;font-size:13px;font-weight:600;
+  text-decoration:none;cursor:pointer;border:1px solid transparent;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  transition:background .15s,border-color .15s,color .15s;
+}
+.qzn-btn.primary{background:#C2402B;border-color:#C2402B;color:#fff}
+.qzn-btn.primary:hover{background:#A93521;border-color:#A93521}
+.qzn-btn.ghost{background:#fff;border-color:#E6E1D8;color:#4A5158}
+.qzn-btn.ghost:hover{border-color:#C2402B;color:#C2402B}
+.qzn-btn.subtle{background:transparent;border-color:transparent;color:#8A9099;font-weight:500;font-size:12px}
+.qzn-btn.subtle:hover{color:#C2402B}
+.qzn-btn[aria-disabled="true"]{opacity:.45;pointer-events:none;filter:grayscale(.3)}
+.qzn-btn .qzn-sub{font-weight:400;opacity:.85}
+.qzn-mid{
+  flex:1;min-width:0;text-align:center;line-height:1.35;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+}
+.qzn-mid b{display:block;font-size:12.5px;color:#15181D;letter-spacing:.02em}
+.qzn-mid span{display:block;font-size:11px;color:#8A9099;margin-top:1px}
+.qzn-right{display:flex;align-items:center;gap:8px}
+.qzn-busy{opacity:.7;pointer-events:none}
+
+@media(max-width:760px){
+  .qzn-foot-in{flex-wrap:wrap;gap:8px;padding:8px 12px}
+  .qzn-btn{flex:1;justify-content:center;padding:9px 10px;font-size:12.5px}
+  .qzn-mid{order:-1;flex-basis:100%;text-align:left;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+  .qzn-mid b{display:inline}
+  .qzn-mid span{margin-top:0}
+  .qzn-right{flex:1;justify-content:flex-end}
+  .qzn-right .qzn-btn{flex:0 1 auto}
+  .qzn-btn .qzn-sub{display:none}
+}
+
+/* ---------- 顶部服务在线（Bug6） ---------- */
+.qzn-health{
+  display:inline-flex;align-items:center;gap:5px;white-space:nowrap;
+  font-size:11px;color:#8A9099;border:1px solid #E6E1D8;background:#fff;
+  border-radius:999px;padding:2px 9px;line-height:1.5;
+}
+.qzn-health .d{width:6px;height:6px;border-radius:50%;background:#B7791F;flex:none}
+.qzn-health.ok{color:#2F7D5F;border-color:#CFE3D8;background:#F2F9F5}
+.qzn-health.ok .d{background:#2F7D5F}
+.qzn-health.bad{color:#B23B2E;border-color:#F0D3CC;background:#FDF5F3}
+.qzn-health.bad .d{background:#B23B2E}
+@media(max-width:760px){
+  .qzn-health{font-size:10.5px;padding:2px 7px}
+}

@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>群智工作台 · 数据面板 + 5 条业务线</title>
+<style>
+  :root{
+    --paper:#FAF6F0; --paper2:#F3EDE3; --card:#fff; --ink:#15181D; --ink2:#3A4048;
+    --dim:#8A8579; --line:#E6E1D8; --accent:#C2402B; --deep:#8C2E1E; --ok:#2F7D4F;
+    --warn:#B7791F; --bad:#B23B2E; --blue:#2B4C7E;
+    --mono:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+    --serif:"Noto Serif SC","Songti SC",SimSun,Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);line-height:1.65;
+       font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+       -webkit-font-smoothing:antialiased}
+  a{color:inherit}
+  code{font-family:var(--mono);font-size:.88em;background:var(--paper2);padding:1px 5px;border-radius:4px}
+
+  /* 顶栏 */
+  .top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+       padding:13px 26px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+  .brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+  .mark{width:30px;height:30px;border-radius:9px;background:var(--accent);color:#fff;display:grid;place-items:center;
+        font-weight:800;font-size:14px}
+  .brand b{font-size:17px;letter-spacing:.04em}
+  .brand span{font-size:11.5px;color:var(--dim);font-family:var(--mono);letter-spacing:.14em}
+  .top nav{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .top nav a{font-size:13px;color:var(--ink2);text-decoration:none}
+  .top nav a:hover{color:var(--accent)}
+  .top-left{display:flex;align-items:center;gap:10px;min-width:0}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
+        background:var(--paper2);border:1px solid var(--line);font-size:12px;color:var(--ink2);white-space:nowrap}
+  .pill .dot{width:6px;height:6px;border-radius:50%;background:var(--warn)}
+  .pill .dot.ok{background:var(--ok)}
+  .pill .dot.bad{background:var(--bad)}
+
+  /* Bug1/Bug2：左侧 9 项主导航 + 移动端抽屉（≤1000px 折叠） */
+  .wb-rail{position:fixed;left:0;top:0;bottom:0;width:228px;z-index:40;
+    background:linear-gradient(180deg,#181B21,#12151A);color:#E9E4DA;
+    display:flex;flex-direction:column;border-right:1px solid #00000033;overflow:auto}
+  .wb-rail .rb{display:flex;align-items:center;gap:10px;padding:18px 15px 13px;color:#F5EFE4;text-decoration:none}
+  .wb-rail .rb:hover{text-decoration:none}
+  .wb-rail .rb .mark{width:34px;height:34px;flex:0 0 34px;border-radius:9px;background:var(--accent);
+    color:#fff;display:grid;place-items:center;font-weight:800;font-size:14px}
+  .wb-rail .rb b{display:block;font-size:15px;letter-spacing:.08em;line-height:1.3}
+  .wb-rail .rb em{display:block;font-style:normal;font-size:9px;letter-spacing:.22em;color:#8E8677;margin-top:1px}
+  .wb-rail nav{display:flex;flex-direction:column;gap:2px;padding:3px 9px 12px}
+  .wb-rail .rg{font-size:9.5px;letter-spacing:.18em;color:#6E675B;margin:12px 9px 4px}
+  .wb-rail .ni{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;color:#CFC8BB;
+    font-size:13px;line-height:1.45;text-decoration:none;border:1px solid transparent}
+  .wb-rail .ni:hover{background:#FFFFFF0D;color:#fff;text-decoration:none}
+  .wb-rail .ni.on{background:#C2402B1F;border-color:#C2402B55;color:#FFE9E2}
+  .wb-rail .ni .ic{width:17px;flex:none;text-align:center;opacity:.9;font-size:13px}
+  .wb-rail .ni .tag{margin-left:auto;font-size:9.5px;color:#7C7466;border:1px solid #FFFFFF1A;border-radius:6px;padding:0 5px}
+  .wb-rail .rf{margin-top:auto;padding:12px 15px 16px;border-top:1px solid #FFFFFF12;font-size:10.5px;color:#7C7466;line-height:1.9}
+  .wb-rail .rf a{color:#C9BFAE;text-decoration:none;margin-right:9px}
+  .wb-rail .rf a:hover{color:#fff}
+  .wb-burger{display:none;align-items:center;justify-content:center;width:36px;height:33px;flex:none;
+    border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font-size:17px;cursor:pointer;line-height:1}
+  .wb-burger:hover{border-color:var(--accent);color:var(--accent)}
+  .wb-burger[aria-expanded="true"]{background:#F6E7E3;border-color:var(--accent);color:var(--accent)}
+  .wb-scrim{position:fixed;inset:0;background:rgba(21,24,29,.46);z-index:35}
+  .wb-scrim[hidden]{display:none}
+  @media(min-width:1001px){body{padding-left:228px}.wb-rail{transform:none!important}}
+  @media(max-width:1000px){
+    body{padding-left:0}
+    .wb-rail{width:264px;max-width:82vw;transform:translateX(-102%);transition:transform .22s ease}
+    .wb-rail.open{transform:translateX(0)}
+    .wb-burger{display:inline-flex}
+    body.rail-open{overflow:hidden}
+  }
+  .wb-rail a:focus-visible,.wb-burger:focus-visible{outline:2px solid #C2402B;outline-offset:2px}
+
+  /* Bug4：首次加载骨架 */
+  .stat-strip.loading .v,.kpi.loading .v{font-family:inherit;font-size:12.5px;font-weight:500;color:var(--dim)}
+  .loading-box{display:flex;align-items:center;gap:8px;color:var(--dim);font-size:12.5px;line-height:1.6;width:100%}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:26px 22px 56px}
+  .kick{font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--accent);margin:0 0 8px}
+  h1{font-size:30px;line-height:1.3;margin:0 0 8px;letter-spacing:-.01em}
+  .lead{color:var(--ink2);font-size:14px;margin:0 0 18px;max-width:760px}
+  .lead b{color:var(--accent)}
+
+  /* 顶部数据条 */
+  .stat-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:18px 0 6px}
+  .stat-strip .st{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .stat-strip .v{font-family:var(--mono);font-size:22px;font-weight:800;line-height:1.25}
+  .stat-strip .l{font-size:11.5px;color:var(--dim);letter-spacing:.04em}
+  .api-note{font-size:11.5px;color:var(--dim);margin:8px 0 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .api-note code{background:#fff;border:1px solid var(--line)}
+  .mini{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;color:var(--ink2);
+        border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;font-family:inherit}
+  .mini:hover{border-color:rgba(194,64,43,.45);color:var(--accent)}
+
+  /* 区块 */
+  .section{margin-top:30px}
+  .sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+         border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:13px}
+  .sec-h h2{font-size:16px;margin:0;display:flex;align-items:center;gap:8px}
+  .sec-h span{font-size:11.5px;color:var(--dim)}
+  .sec-h a{font-size:12px;color:var(--accent);text-decoration:none;font-weight:700}
+  .grid{display:grid;gap:14px}
+  .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:16px 17px 15px;
+        box-shadow:0 1px 2px rgba(21,24,29,.04),0 8px 22px rgba(21,24,29,.04)}
+  .card h3{margin:0 0 6px;font-size:15px;font-weight:700;display:flex;align-items:center;gap:7px}
+  .card .hint{color:var(--dim);font-size:12px;margin:0 0 11px;line-height:1.6}
+  .kpi{display:flex;gap:9px;flex-wrap:wrap}
+  .kpi>div{flex:1;min-width:96px;background:var(--paper2);border:1px solid var(--line);border-radius:9px;padding:8px 10px}
+  .kpi .v{font-family:var(--mono);font-size:18px;font-weight:800;line-height:1.3}
+  .kpi .l{font-size:11.5px;color:var(--dim)}
+
+  /* 全文覆盖（按年）条形图 */
+  .cov{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+  .cov-row{display:grid;grid-template-columns:42px 1fr 58px 106px;gap:8px;align-items:center;font-size:11.5px}
+  .cov-y{font-family:var(--mono);font-weight:700;color:var(--ink2)}
+  .cov-track{height:10px;border-radius:999px;background:var(--paper2);border:1px solid var(--line);overflow:hidden}
+  .cov-fill{display:block;height:100%;border-radius:999px;background:var(--accent)}
+  .cov-fill.mid{background:var(--warn)}
+  .cov-fill.low{background:var(--bad)}
+  .cov-rate{font-family:var(--mono);font-weight:800;text-align:right}
+  .cov-n{font-family:var(--mono);color:var(--dim);text-align:right;font-size:11px}
+  .cov-foot{font-size:10.5px;color:var(--dim);margin-top:8px}
+  .stale{font-size:12px;line-height:1.7;color:#7A5A12;background:#FFF8E8;border:1px solid #EBD8B2;
+         border-radius:9px;padding:8px 11px;margin:0 0 12px}
+  .stale.bad{color:#8C2E1E;background:#FDF5F3;border-color:#F0D3CC}
+
+  /* 任务历史 */
+  .runs{display:flex;flex-direction:column;gap:7px}
+  .run-item{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:9px;
+            padding:8px 11px;background:#fff;text-decoration:none;min-width:0}
+  a.run-item:hover{border-color:rgba(194,64,43,.45)}
+  .run-item .rj{font-family:var(--mono);font-size:11.5px;font-weight:700;color:var(--accent);flex:none}
+  .run-item .rt{flex:1;min-width:0;font-size:12.5px;color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .run-item .rm{flex:none;font-size:11px;color:var(--dim);font-family:var(--mono)}
+  .run-item .rg{flex:none;font-size:11.5px;color:var(--accent);font-weight:700}
+  .empty{color:var(--dim);font-size:12.5px;padding:8px 0;line-height:1.7}
+  .error{color:var(--bad);font-size:12.5px;padding:8px 0;line-height:1.7}
+
+  /* 包检查面板 */
+  .job-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px;
+           background:#fff;border:1px solid var(--line);border-radius:11px;padding:10px 13px;font-size:12.5px;color:var(--ink2)}
+  .job-bar select{font-family:inherit;font-size:12.5px;padding:6px 9px;border:1px solid var(--line);border-radius:8px;
+                  background:#fff;color:var(--ink);max-width:100%;min-width:0}
+  .job-bar .meta{font-size:11.5px;color:var(--dim)}
+  .pkg-body{min-height:74px}
+  .btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--ink);background:var(--ink);color:#F7F2E8;
+       padding:8px 14px;border-radius:9px;font-size:13px;cursor:pointer;font-family:inherit;font-weight:600}
+  .btn:hover{background:#262B33}
+  .btn.accent{background:var(--accent);border-color:var(--accent)}
+  .btn.accent:hover{background:var(--deep)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn-row{margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .btn-row .link{font-size:12px;color:var(--accent);text-decoration:none;font-weight:700}
+  .bdg{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:700}
+  .bdg.ok{background:#E7F3EA;color:var(--ok)}
+  .bdg.warn{background:#FBF0DA;color:#9A6512}
+  .bdg.bad{background:#FBE9E5;color:var(--bad)}
+  .bdg.info{background:#E9EEF7;color:var(--blue)}
+  .bdg.dim{background:var(--paper2);color:var(--dim)}
+  .items{display:flex;flex-direction:column;gap:7px;margin-top:9px}
+  .item{border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:#fff;font-size:12px;line-height:1.6}
+  .item .m{color:var(--dim);font-size:11px;margin-top:3px}
+  .mono{font-family:var(--mono);font-size:11.5px}
+  .spin{display:inline-block;width:13px;height:13px;border:2px solid #C2402B33;border-top-color:var(--accent);
+        border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  /* 底部：继续上次 / 最近任务 / 5 条线 */
+  .bottom{border-top:1px solid var(--ink);margin-top:38px;padding-top:18px}
+  .last{display:flex;align-items:center;gap:20px;justify-content:space-between;flex-wrap:wrap;
+        background:linear-gradient(135deg,#fff 0%,#FDF8F2 100%);border:1px solid var(--line);border-left:4px solid var(--accent);
+        border-radius:13px;padding:16px 18px;box-shadow:0 8px 26px rgba(21,24,29,.05)}
+  .last .lab{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--dim);margin-bottom:5px}
+  .last .line{font-size:12px;color:var(--accent);font-weight:700;margin-bottom:3px}
+  .last .t{font-size:16px;font-weight:700;line-height:1.45;max-width:62ch}
+  .last .m{font-size:12px;color:var(--dim);margin-top:5px}
+  .last .go{flex:none;background:var(--accent);color:#fff;text-decoration:none;border-radius:9px;
+            padding:10px 18px;font-size:13.5px;font-weight:700;white-space:nowrap}
+  .last .go:hover{background:#A93521}
+  .last-empty{background:#fff;border:1px dashed var(--line);border-radius:13px;padding:16px 18px;color:var(--dim);font-size:12.5px}
+  .last-empty a{color:var(--accent);font-weight:700;text-decoration:none}
+
+  .recent{display:grid;gap:8px}
+  .r-item{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);
+          border-radius:9px;padding:10px 13px;text-decoration:none;min-width:0}
+  .r-item:hover{border-color:rgba(194,64,43,.45);box-shadow:0 4px 14px rgba(21,24,29,.05)}
+  .r-item .r-t{flex:1;min-width:0;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .r-item .r-m{flex:none;font-size:11px;color:var(--accent);background:#F6E7E3;border-radius:999px;padding:2px 9px}
+  .r-item .r-time{flex:none;font-size:10.5px;color:var(--dim);font-family:var(--mono);width:68px;text-align:right}
+
+  .lines{display:grid;gap:9px}
+  .ln{display:flex;align-items:center;gap:13px;background:#fff;border:1px solid var(--line);
+      border-radius:10px;padding:11px 14px;text-decoration:none}
+  .ln:hover{border-color:rgba(194,64,43,.45);box-shadow:0 4px 14px rgba(21,24,29,.05)}
+  .ln .no{flex:none;width:27px;height:27px;border-radius:50%;background:#F6E7E3;color:var(--accent);
+          display:grid;place-items:center;font-family:var(--mono);font-size:12px;font-weight:800}
+  .ln .body{flex:1;min-width:0}
+  .ln .n{display:block;font-size:14px;font-weight:700;margin-bottom:1px}
+  .ln .p{display:block;font-size:11px;color:var(--dim);line-height:1.6}
+  .ln .st{flex:none;font-size:12px;font-weight:700;color:var(--accent);white-space:nowrap}
+  .note{margin-top:18px;background:var(--card);border:1px solid var(--line);border-radius:11px;
+        padding:12px 15px;font-size:12px;color:var(--ink2);line-height:1.8}
+  .note b{color:var(--accent)}
+  footer{margin-top:24px;padding-top:13px;border-top:1px solid var(--line);
+         font-size:11.5px;color:var(--dim);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  footer a{color:var(--ink2);text-decoration:none;margin-left:14px}
+  footer a:hover{color:var(--accent)}
+
+  @media(max-width:860px){.g2,.g3{grid-template-columns:1fr}.stat-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:640px){
+    h1{font-size:23px}.wrap{padding:20px 14px 40px}.last{padding:15px}
+    .last .go{width:100%;text-align:center}.ln .st{display:none}
+    .cov-row{grid-template-columns:38px 1fr 50px}.cov-n{display:none}
+    .top{padding:11px 14px}
+  }
+</style>
+</head>
+<body>
+<div class="wb-scrim" id="wbScrim" hidden></div>
+<aside class="wb-rail" id="wbRail" aria-label="主导航">
+  <a class="rb" href="/portal" title="回群智门户">
+    <span class="mark">群</span>
+    <span><b>群智工作台</b><em>QUNZHI · WORKBENCH</em></span>
+  </a>
+  <nav>
+    <div class="rg">核心业务</div>
+    <a class="ni" href="/workbench" data-nav="/workbench"><span class="ic">◎</span>工作台</a>
+    <a class="ni" href="/kb/selfcheck" data-nav="/kb/selfcheck"><span class="ic">✓</span>单篇体检</a>
+    <a class="ni" href="/pkg" data-nav="/pkg"><span class="ic">▣</span>整包检查</a>
+    <a class="ni" href="/kb" data-nav="/kb"><span class="ic">⌕</span>文献工作</a>
+    <a class="ni" href="/judge" data-nav="/judge"><span class="ic">◈</span>选题评估</a>
+    <a class="ni" href="/kb/baseline" data-nav="/kb/baseline"><span class="ic">▧</span>同行基线</a>
+    <a class="ni" href="/gates" data-nav="/gates"><span class="ic">闸</span>四关一审</a>
+    <div class="rg">平台</div>
+    <a class="ni" href="/tools" data-nav="/tools"><span class="ic">⌘</span>能力平台</a>
+    <a class="ni" href="/runs" data-nav="/runs"><span class="ic">◱</span>任务历史</a>
+  </nav>
+  <div class="rf">
+    <a href="/eval">评测面板</a><a href="/evidence?pid=ax_2510.19425">证据高亮</a><br>
+    <a href="/admin">管理台</a><a href="/portal">回门户</a>
+  </div>
+</aside>
+<div class="top">
+  <div class="top-left">
+    <button class="wb-burger" id="wbBurger" type="button" aria-label="打开主导航" aria-controls="wbRail" aria-expanded="false">☰</button>
+    <a class="brand" href="/portal"><span class="mark">群</span><b>群智工作台</b><span>QUNZHI</span></a>
+  </div>
+  <nav>
+    <a href="/portal">5 条业务线</a>
+    <a href="/tools">能力平台</a>
+    <a href="/runs">任务历史</a>
+    <a href="/api/lib/health_live?key=__QZ_DEMO_KEY__" target="_blank" rel="noopener">库健康</a>
+    <span class="pill" id="livePill"><span class="dot" id="liveDot"></span><span id="liveTxt">检查中…</span></span>
+  </nav>
+</div>
+
+<div class="wrap">
+  <p class="kick">QUNZHI · WORKBENCH</p>
+  <h1>论文体检数据面板</h1>
+  <p class="lead">上半的库规模/全文覆盖<b>每次打开都实时查库</b>（<code>/api/lib/health_live</code>）；任务与备份来自 watchdog 状态文件，文件滞后会在区块标题旁明确标出。下半回到 <b>5 条业务线</b>，接着上次继续。</p>
+
+  <!-- 实时统计（/api/wb/stats） -->
+  <div class="stat-strip loading" id="statStrip" aria-busy="true">
+    <div class="st"><div class="v" id="st-papers">加载中…</div><div class="l">篇论文</div></div>
+    <div class="st"><div class="v" id="st-ft">加载中…</div><div class="l">篇全文</div></div>
+    <div class="st"><div class="v" id="st-issues">加载中…</div><div class="l">条问题点</div></div>
+    <div class="st"><div class="v" id="st-refs">加载中…</div><div class="l">条引用关系</div></div>
+  </div>
+  <div id="stCall" class="hint" style="margin:-6px 0 10px"><span class="spin"></span> 正在读取 /api/wb/stats…</div>
+  <div class="api-note">
+    数据接口：<code>/api/wb/stats</code><code>/api/lib/health_live</code><code>/api/lib/status</code><code>/api/tools</code><code>/api/runs</code>
+    <button class="mini" id="btnRefresh" type="button">↻ 刷新数据</button>
+  </div>
+
+  <!-- 库状态 + 全文覆盖 -->
+  <section class="section">
+    <div class="sec-h"><h2>云端库任务与全文覆盖</h2><span id="libAt">读取 /api/lib/health_live…</span></div>
+    <div id="libStale" class="stale" hidden></div>
+    <div class="grid g2">
+      <div class="card">
+        <h3>云端库任务 <span class="bdg info" id="libTag">同步中</span></h3>
+        <p class="hint">watchdog 状态文件只决定「任务/备份」；超过 2 小时未更新会标黄。<b>库规模与覆盖数字不读这个文件</b>，每次打开实时查库。</p>
+        <div class="kpi" id="libKpi" aria-busy="true">
+          <div class="loading-box"><span class="spin"></span> 正在读取实时库状态（/api/lib/health_live）…</div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>全文覆盖（按年）</h3>
+        <p class="hint">分子 = 该年有全文的论文，分母 = 该年入库论文；条形长度即覆盖率。当前接口只返回最近 4 年，未列出的年份不计入本图。</p>
+        <div class="cov" id="covChart"><div class="empty"><span class="spin"></span> 读取覆盖率…</div></div>
+        <div class="cov-foot" id="covFoot">数据源 /api/lib/health_live（实时）· coverage_by_year</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 疑点判定 / 数字对账 -->
+  <section class="section">
+    <div class="sec-h"><h2>包检查 · 疑点判定 / 数字对账</h2><a href="/pkg">上传新的申报包 →</a></div>
+    <div class="job-bar">
+      <label for="jobSel"><b>已上传的包</b></label>
+      <select id="jobSel" disabled><option>加载任务历史…</option></select>
+      <span class="meta" id="jobMeta">读取 /api/runs…</span>
+    </div>
+    <div class="grid g2">
+      <div class="card">
+        <h3>◆ 疑点判定</h3>
+        <p class="hint">逐条判断「确认成立 / 已被处理 / 证据不足」，每条带原文证据；调用 /api/pkg/&lt;job&gt;/review。</p>
+        <div class="pkg-body" id="deepBody"><div class="empty">选一个包，点下方按钮运行深度判定（约 30–60 秒）。</div></div>
+        <div class="btn-row">
+          <button class="btn accent" id="btnDeep" type="button" disabled>运行深度判定</button>
+          <a class="link" id="deepLink" href="#" target="_blank" rel="noopener" style="display:none">查看完整判定报告 ↗</a>
+        </div>
+      </div>
+      <div class="card">
+        <h3>▦ 跨文件数字对账</h3>
+        <p class="hint">找同一指标的不同数值（如 82 轮 vs 90 轮、563 条 vs 566 条）；调用 /api/pkg/&lt;job&gt;/numbers。</p>
+        <div class="pkg-body" id="numBody"><div class="empty">选一个包，点下方按钮运行数字对账（约 30–60 秒）。</div></div>
+        <div class="btn-row">
+          <button class="btn accent" id="btnNum" type="button" disabled>运行数字对账</button>
+          <a class="link" id="numLink" href="#" target="_blank" rel="noopener" style="display:none">查看完整对账报告 ↗</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 任务历史（/api/runs） -->
+  <section class="section">
+    <div class="sec-h"><h2>任务历史</h2><a href="/runs">全部历史 →</a></div>
+    <div class="runs" id="runList"><div class="empty"><span class="spin"></span> 读取 /api/runs…</div></div>
+  </section>
+
+  <!-- 下半：新版入口 -->
+  <div class="bottom">
+    <section class="section" style="margin-top:0">
+      <div class="sec-h"><h2>接着上次继续</h2><span>存在本机浏览器 · 走任意一条线自动记录</span></div>
+      <div id="lastBox"></div>
+    </section>
+
+    <section class="section">
+      <div class="sec-h"><h2>5 条业务线</h2><span>每条线的起点；入口统一在 /portal</span></div>
+      <div class="lines" id="lineList"></div>
+    </section>
+
+    <section class="section">
+      <div class="sec-h"><h2>最近 4 条任务</h2><span>本机浏览器记录 · 最新在前</span></div>
+      <div class="recent" id="recentList"></div>
+    </section>
+
+    <div class="note">
+      <b>找不到入口？</b> 回 <a href="/portal" style="color:var(--accent);font-weight:700;text-decoration:none">门户</a> 点一张卡，就是那条线的第 1 步。
+      每页顶部有面包屑，底部有「上一步 / 下一步」；论文 pid、包任务 job 带在 URL 里，刷新不丢。
+    </div>
+
+    <footer>
+      <div>群智 QunZhi · 论文体检 · 2026</div>
+      <div><a href="/portal">门户</a><a href="/tools">能力平台</a><a href="/runs">任务历史</a><a href="/console">控制台</a></div>
+    </footer>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var KEY = "__QZ_DEMO_KEY__";
+  var API = {
+    stats: "/api/wb/stats",
+    lib: "/api/lib/status",
+    health: "/api/lib/health",
+    healthLive: "/api/lib/health_live",
+    tools: "/api/tools",
+    runs: "/api/runs"
+  };
+
+  function $(s, r) { return (r || document).querySelector(s); }
+  function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+  function num(n) {
+    return (n == null || isNaN(n)) ? "—" : Number(n).toLocaleString("zh-CN");
+  }
+  function safeHref(href, dft) {
+    var h = String(href || "");
+    if (h.charAt(0) === "/" && h.charAt(1) !== "/") return h;
+    return dft || "/portal";
+  }
+  function setText(id, v) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = v;
+  }
+  function ago(t) {
+    if (!t) return "";
+    var s = Math.max(1, Math.round((Date.now() - t) / 1000));
+    if (s < 60) return s + " 秒前";
+    if (s < 3600) return Math.round(s / 60) + " 分钟前";
+    if (s < 86400) return Math.round(s / 3600) + " 小时前";
+    return Math.round(s / 86400) + " 天前";
+  }
+  function jgetH(url, headers, ms) {
+    var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, ms || 15000) : null;
+    return fetch(url, { cache: "no-store", headers: headers || {},
+        signal: ctrl ? ctrl.signal : undefined })
+      .then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
+      .then(function (j) { if (timer) clearTimeout(timer); return j; },
+            function (e) { if (timer) clearTimeout(timer); throw e; });
+  }
+
+  function jget(url, ms) {
+    var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, ms || 15000) : null;
+    return fetch(url, { cache: "no-store", signal: ctrl ? ctrl.signal : undefined })
+      .then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
+      .then(function (j) { if (timer) clearTimeout(timer); return j; },
+            function (e) { if (timer) clearTimeout(timer); throw e; });
+  }
+
+  /* ---------- 实时统计 /api/wb/stats ---------- */
+  function setBusy(id, on) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle("loading", !!on);
+    el.setAttribute("aria-busy", on ? "true" : "false");
+  }
+  function loadStats() {
+    setBusy("statStrip", true);
+    setText("stCall", "加载中… 正在读取 /api/wb/stats");
+    jget(API.stats).then(function (j) {
+      setText("st-papers", num(j.papers));
+      setText("st-ft", num(j.fulltext));
+      setText("st-refs", num(j.refs));
+      // 2026-11-22 BUG-005：工作台数字旁也展示 call_id（点击回放）。
+      var cb = document.getElementById("stCall");
+      if (cb && j.call_id) {
+        cb.innerHTML = "库规模 call_id：" +
+          '<a class="call-badge" href="/api/call/' + encodeURIComponent(j.call_id) +
+          '" target="_blank" rel="noopener" title="call_id: ' + esc(j.call_id) +
+          ' · 点击回放">' + esc(String(j.call_id).replace(/^qz_\d+_/, "")) + "</a>" +
+          "　数据源 /api/wb/stats";
+      } else {
+        setText("stCall", "数据源 /api/wb/stats");
+      }
+      if (j.issues != null) {
+        setText("st-issues", num(j.issues));
+      } else {
+        /* wb/stats 不含 issues 时用 /api/lib/health 兜底 */
+        jget(API.health).then(function (h) {
+          setText("st-issues", num(h.issues));
+        }).catch(function () { setText("st-issues", "—"); });
+      }
+    }).catch(function (e) {
+      ["st-papers", "st-ft", "st-issues", "st-refs"].forEach(function (id) { setText(id, "—"); });
+      setText("stCall", "实时统计读取失败：" + (e && e.message ? e.message : "unknown"));
+    }).then(function () { setBusy("statStrip", false); });
+  }
+
+  /* ---------- 顶栏实时状态：真查 /api/lib/health_live（Bug6） ---------- */
+  function loadLive() {
+    var dot = document.getElementById("liveDot");
+    var txt = document.getElementById("liveTxt");
+    if (txt) txt.textContent = "检查中…";
+    jgetH(API.healthLive + "?probe=1", { "X-Access-Key": KEY }, 12000).then(function (j) {
+      if (!j || j.ok === false) throw new Error((j && j.error) || "health_live 返回异常");
+      if (dot) dot.className = "dot ok";
+      if (txt) {
+        txt.textContent = "服务在线";
+        txt.title = "/api/lib/health_live 探测成功 · " + new Date().toLocaleTimeString("zh-CN", { hour12: false });
+      }
+      document.body.setAttribute("data-live", "online");
+    }).catch(function (e) {
+      if (dot) dot.className = "dot bad";
+      if (txt) {
+        txt.textContent = "服务离线";
+        txt.title = "无法访问 /api/lib/health_live：" + (e && e.message ? e.message : "unknown");
+      }
+      document.body.setAttribute("data-live", "offline");
+    });
+  }
+
+  /* ---------- 库状态 + 全文覆盖 /api/lib/status ---------- */
+  function renderCoverage(cov) {
+    var box = document.getElementById("covChart");
+    if (!cov || !cov.length) {
+      box.innerHTML = '<div class="empty">暂无分年覆盖数据（/api/lib/status 未返回 coverage_by_year）。</div>';
+      return;
+    }
+    box.innerHTML = cov.map(function (c) {
+      var rate = c.rate == null ? 0 : Number(c.rate);
+      var w = Math.max(2, Math.min(100, rate));
+      var cls = rate >= 95 ? "" : (rate >= 80 ? " mid" : " low");
+      return '<div class="cov-row">' +
+        '<span class="cov-y">' + esc(c.year) + '</span>' +
+        '<span class="cov-track"><span class="cov-fill' + cls + '" style="width:' + w + '%"></span></span>' +
+        '<span class="cov-rate">' + (c.rate == null ? "—" : esc(c.rate) + "%") + '</span>' +
+        '<span class="cov-n">' + num(c.fulltext) + ' / ' + num(c.papers) + '</span>' +
+        '</div>';
+    }).join("");
+  }
+
+  function ageHours(iso) {
+    if (!iso) return null;
+    var t = Date.parse(String(iso).replace(" ", "T"));
+    if (isNaN(t)) return null;
+    return (Date.now() - t) / 3600000;
+  }
+  function timeNow() {
+    var d = new Date();
+    function p(n) { return (n < 10 ? "0" : "") + n; }
+    return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " +
+      p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+  }
+
+  /* QBUG-003：一屏只用一个来源。库规模/全文/覆盖一律用健康接口的实时值；
+     QBUG-004：watchdog 状态文件只提供任务与备份，滞后时显式标黄。 */
+  function applyLib(j, source) {
+    var err = j && j.error;
+    if (err) {
+      document.getElementById("libKpi").innerHTML = '<div class="error">库状态不可用：' + esc(err) + '</div>';
+      return;
+    }
+    var papers = (j.papers != null) ? j.papers : j.unique_papers;
+    var jobs = j.jobs || {};
+    var run = Object.keys(jobs).filter(function (k) { return jobs[k]; });
+    setText("libTag", run.length ? ("运行中 " + run.length) : "空闲");
+    document.getElementById("libKpi").innerHTML =
+      '<div><div class="v">' + num(papers) + '</div><div class="l">论文记录</div></div>' +
+      '<div><div class="v">' + num(j.unique_papers) + '</div><div class="l">唯一论文</div></div>' +
+      '<div><div class="v">' + num(j.fulltext) + '</div><div class="l">有全文</div></div>' +
+      '<div><div class="v">' + num(j.issues) + '</div><div class="l">问题点</div></div>' +
+      '<div><div class="v">' + (j.last_backup_gb ? esc(j.last_backup_gb) + " GB" : "—") + '</div><div class="l">最近备份</div></div>';
+    renderCoverage(j.coverage_by_year);
+    setText("libAt", source + (j.at ? (" · " + j.at) : ""));
+    if (j.last_backup) setText("covFoot", "数据源 " + source + " · 最近备份 " + j.last_backup);
+    else setText("covFoot", "数据源 " + source + " · coverage_by_year");
+  }
+
+  function setStale(iso, source) {
+    var box = document.getElementById("libStale");
+    if (!box) return;
+    var age = ageHours(iso);
+    if (age == null) {
+      box.hidden = false;
+      box.className = "stale bad";
+      box.innerHTML = "⚠️ watchdog 状态文件没有可读时间戳（" + esc(source || "/api/lib/status") +
+        "）；任务/备份信息可能不是最新的，上面的库规模与覆盖已实时查库。";
+      return;
+    }
+    if (age <= 2) { box.hidden = true; return; }
+    box.hidden = false;
+    box.className = "stale" + (age > 24 ? " bad" : "");
+    box.innerHTML = "⚠️ watchdog 状态文件停在 <b>" + esc(iso) + "</b>（约 " +
+      (age >= 48 ? Math.round(age / 24) + " 天" : age.toFixed(1) + " 小时") +
+      "前），与页面承诺的「每 5 分钟」不符；<b>任务/备份字段可能过期</b>，库规模与覆盖数字已由 /api/lib/health_live 实时重算。";
+  }
+
+  function loadLib() {
+    setBusy("libKpi", true);
+    setText("libAt", "加载中… 正在读取 /api/lib/health_live");
+    var liveP = jgetH(API.healthLive, {"X-Access-Key": KEY}, 30000)
+      .catch(function (e) { return { error: e.message }; });
+    var statusP = jget(API.lib, 12000).catch(function (e) { return { error: e.message }; });
+    Promise.all([liveP, statusP]).then(function (res) {
+      var h = res[0], st = res[1] || {};
+      if (h && !h.error) {
+        // 状态文件里的任务/备份字段合并进来，但库规模/覆盖数字以实时接口为准
+        if (st && !st.error) {
+          h.jobs = st.jobs || {};
+          h.last_backup = st.last_backup || "";
+          h.last_backup_gb = st.last_backup_gb;
+        }
+        applyLib(h, "实时 /api/lib/health_live · 查询于 " + timeNow());
+        if (st && !st.error) {
+          var jobs = st.jobs || {};
+          var run = Object.keys(jobs).filter(function (k) { return jobs[k]; });
+          setText("libTag", run.length ? ("运行中 " + run.length) : "空闲");
+          if (st.last_backup) {
+            setText("covFoot", "数据源 /api/lib/health_live（实时）· 最近备份 " + st.last_backup +
+              " · 任务状态来自 /api/lib/status");
+          }
+          setStale(st.at, "/api/lib/status");
+        } else {
+          setStale(null, "/api/lib/status");
+        }
+      } else if (st && !st.error) {
+        // 实时接口不可用时退回状态文件，并明确这不是实时数
+        applyLib(st, "/api/lib/status（watchdog 快照，非实时）");
+        setStale(st.at, "/api/lib/status");
+      } else {
+        document.getElementById("libKpi").innerHTML = '<div class="error">库状态读取失败：' +
+          esc((h && h.error) || (st && st.error) || "unknown") + '</div>';
+        document.getElementById("covChart").innerHTML = '<div class="error">覆盖率读取失败。</div>';
+        setStale(null, "/api/lib/status");
+      }
+    }).then(function () { setBusy("libKpi", false); });
+  }
+
+  /* ---------- 任务历史 /api/runs ---------- */
+  var currentJob = "";
+  var busy = { review: false, numbers: false };
+
+  function renderRuns(runs) {
+    var box = document.getElementById("runList");
+    if (!runs.length) {
+      box.innerHTML = '<div class="empty">还没有任务记录。去 <a href="/pkg" style="color:var(--accent)">/pkg</a> 上传一个申报包，这里就会出现。</div>';
+      return;
+    }
+    box.innerHTML = runs.slice(0, 8).map(function (r) {
+      var isPkg = r.kind === "pkg" && r.job;
+      var href = isPkg ? "/pkg/" + encodeURIComponent(r.job) + "?job=" + encodeURIComponent(r.job) : "";
+      var tag = isPkg ? '<span class="rg">查看报告 →</span>' : '<span class="bdg dim">agent</span>';
+      var title = isPkg
+        ? (num(r.files) + " 个文件" + (r.created_at ? " · " + esc(r.created_at) : ""))
+        : ("运行 " + esc(r.run || ""));
+      var open = isPkg ? '<a class="run-item" href="' + esc(href) + '">' : '<div class="run-item">';
+      var close = isPkg ? "</a>" : "</div>";
+      return open +
+        '<span class="rj">' + esc(isPkg ? r.job : r.run) + '</span>' +
+        '<span class="rt">' + title + '</span>' +
+        tag + close;
+    }).join("");
+  }
+
+  function jobHref(kind) {
+    if (!currentJob) return "#";
+    return "/pkg/" + encodeURIComponent(currentJob) + (kind ? "/" + kind : "");
+  }
+
+  function setJobMeta() {
+    var meta = document.getElementById("jobMeta");
+    if (!currentJob) {
+      meta.textContent = "还没有可检查的包，先去 /pkg 上传。";
+      return;
+    }
+    meta.innerHTML = '当前任务 <code>' + esc(currentJob) + '</code> · ' +
+      '<a href="' + esc(jobHref("")) + '" target="_blank" rel="noopener" style="color:var(--accent)">分诊报告 ↗</a>';
+  }
+
+  function loadRuns() {
+    jget(API.runs).then(function (j) {
+      var runs = (j.runs || []).filter(function (r) { return r && r.kind; });
+      renderRuns(runs);
+      var pkg = runs.filter(function (r) { return r.kind === "pkg" && r.job; });
+      var sel = document.getElementById("jobSel");
+      if (!pkg.length) {
+        sel.innerHTML = "<option>暂无已上传的包</option>";
+        sel.disabled = true;
+        document.getElementById("btnDeep").disabled = true;
+        document.getElementById("btnNum").disabled = true;
+        setJobMeta();
+        return;
+      }
+      sel.innerHTML = pkg.map(function (r) {
+        var label = r.job + (r.created_at ? (" · " + r.created_at) : "") + (r.files != null ? (" · " + r.files + " 文件") : "");
+        return '<option value="' + esc(r.job) + '">' + esc(label) + "</option>";
+      }).join("");
+      sel.disabled = false;
+      currentJob = pkg[0].job;
+      sel.value = currentJob;
+      document.getElementById("btnDeep").disabled = false;
+      document.getElementById("btnNum").disabled = false;
+      setJobMeta();
+      sel.onchange = function () {
+        currentJob = sel.value;
+        if (numbersTimer) { clearTimeout(numbersTimer); numbersTimer = null; }
+        setJobMeta();
+        var nb = document.getElementById("btnNum");
+        nb.disabled = false;
+        nb.textContent = "运行数字对账";
+        nb.removeAttribute("data-done");
+        document.getElementById("deepBody").innerHTML = '<div class="empty">已选择 <code>' + esc(currentJob) + '</code>，点下方按钮开始判定。</div>';
+        document.getElementById("numBody").innerHTML = '<div class="empty">已选择 <code>' + esc(currentJob) + '</code>，点下方按钮开始对账。</div>';
+        document.getElementById("deepLink").style.display = "none";
+        document.getElementById("numLink").style.display = "none";
+      };
+      if (new URLSearchParams(location.search).get("auto_numbers") === "1") {
+        setTimeout(autoNumbers, 400);
+      }
+    }).catch(function (e) {
+      document.getElementById("runList").innerHTML = '<div class="error">任务历史读取失败：' + esc(e.message) + '</div>';
+      document.getElementById("jobSel").innerHTML = "<option>读取失败</option>";
+      document.getElementById("jobMeta").textContent = "/api/runs 不可达";
+    });
+  }
+
+  /* ---------- 疑点判定 POST /api/pkg/<job>/review ---------- */
+  function runReview() {
+    if (!currentJob || busy.review) return;
+    busy.review = true;
+    var btn = document.getElementById("btnDeep");
+    var body = document.getElementById("deepBody");
+    var link = document.getElementById("deepLink");
+    var old = btn.textContent;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span> 判定中…';
+    body.innerHTML = '<div class="empty"><span class="spin"></span> 正在逐条判定疑点（最长约 60 秒）…</div>';
+    link.style.display = "none";
+    var t0 = Date.now();
+    fetch("/api/pkg/" + encodeURIComponent(currentJob) + "/review?key=" + encodeURIComponent(KEY), { method: "POST" })
+      .then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          if (!r.ok) throw new Error(j.detail || ("HTTP " + r.status));
+          return j;
+        });
+      })
+      .then(function (j) {
+        var c = j.counts || {};
+        body.innerHTML =
+          '<div class="kpi">' +
+            '<div><div class="v" style="color:var(--ok)">' + num(c.confirmed) + '</div><div class="l">确认成立</div></div>' +
+            '<div><div class="v" style="color:var(--dim)">' + num(c.refuted) + '</div><div class="l">已被处理</div></div>' +
+            '<div><div class="v" style="color:var(--warn)">' + num(c.insufficient) + '</div><div class="l">证据不足</div></div>' +
+          '</div>' +
+          '<div class="empty" style="padding-top:7px">完成，用时 ' + ((Date.now() - t0) / 1000).toFixed(1) + ' 秒。</div>';
+        link.href = "/pkg/" + encodeURIComponent(currentJob) + "/review";
+        link.style.display = "";
+      })
+      .catch(function (e) {
+        body.innerHTML = '<div class="error"><span class="bdg bad">失败</span> ' + esc(e.message) + '</div>';
+      })
+      .then(function () {
+        busy.review = false;
+        btn.disabled = false;
+        btn.textContent = "重新判定";
+        btn.setAttribute("data-old", old);
+      });
+  }
+
+  /* ---------- 数字对账 POST /api/pkg/<job>/numbers ----------
+     Bug5：自动/滚动/刷新重复触发。三层防重：
+       1) isReconciling 并发锁；2) 500ms 防抖；3) 同一 job 10 分钟内复用结果缓存。 */
+  var isReconciling = false;
+  var numbersTimer = null;
+  var numbersCache = {};
+  var NUMBERS_TTL = 10 * 60 * 1000;
+
+  function numbersKey(job) { return "qz.numbers." + job; }
+  function readNumbersCache(job) {
+    if (!job) return null;
+    var hit = numbersCache[job];
+    if (!hit) {
+      try {
+        hit = JSON.parse(sessionStorage.getItem(numbersKey(job)) || "null");
+      } catch (e) { hit = null; }
+      if (hit) numbersCache[job] = hit;
+    }
+    if (!hit || !hit.j || (Date.now() - hit.at) > NUMBERS_TTL) return null;
+    return hit;
+  }
+  function writeNumbersCache(job, j) {
+    var hit = { at: Date.now(), j: j };
+    numbersCache[job] = hit;
+    try { sessionStorage.setItem(numbersKey(job), JSON.stringify(hit)); } catch (e) {}
+  }
+  function renderNumbers(j, t0, cached) {
+    var body = document.getElementById("numBody");
+    var link = document.getElementById("numLink");
+    var items = (j.items || []).map(function (it) {
+      var isBad = String(it.status || "").indexOf("conflict") === 0;
+      return '<div class="item"><span class="bdg ' + (isBad ? "bad" : "ok") + '">' +
+        (isBad ? "真冲突" : "已解释") + '</span> ' + esc(it.metric || "") +
+        '：<span class="mono">' + (it.values || []).map(esc).join(" / ") + '</span></div>';
+    }).join("");
+    body.innerHTML =
+      '<div class="kpi">' +
+        '<div><div class="v" style="color:var(--bad)">' + num(j.conflict) + '</div><div class="l">真冲突</div></div>' +
+        '<div><div class="v">' + num(j.total) + '</div><div class="l">同指标异值</div></div>' +
+      '</div>' +
+      (items ? '<div class="items">' + items + '</div>' : '<div class="empty">未发现数字冲突。</div>') +
+      '<div class="empty" style="padding-top:7px">' +
+        (cached ? "复用本次会话已算结果，未重复触发对账。" : "完成，用时 " + ((Date.now() - t0) / 1000).toFixed(1) + " 秒。") +
+      '</div>';
+    link.href = "/pkg/" + encodeURIComponent(currentJob) + "/numbers";
+    link.style.display = "";
+  }
+
+  function doNumbers(job) {
+    if (isReconciling) return;
+    isReconciling = true;
+    var btn = document.getElementById("btnNum");
+    var body = document.getElementById("numBody");
+    var link = document.getElementById("numLink");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span> 对账中…';
+    body.innerHTML = '<div class="empty"><span class="spin"></span> 正在抽取并归并数字声明（最长约 60 秒）…</div>';
+    link.style.display = "none";
+    var t0 = Date.now();
+    fetch("/api/pkg/" + encodeURIComponent(job) + "/numbers?key=" + encodeURIComponent(KEY), { method: "POST" })
+      .then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          if (!r.ok) throw new Error(j.detail || ("HTTP " + r.status));
+          return j;
+        });
+      })
+      .then(function (j) {
+        writeNumbersCache(job, j);
+        if (currentJob === job) renderNumbers(j, t0, false);
+        btn.setAttribute("data-done", "1");
+      })
+      .catch(function (e) {
+        if (currentJob === job) body.innerHTML = '<div class="error"><span class="bdg bad">失败</span> ' + esc(e.message) + '</div>';
+      })
+      .then(function () {
+        isReconciling = false;
+        if (currentJob === job) {
+          btn.disabled = false;
+          btn.textContent = "重新对账";
+        }
+      });
+  }
+
+  /* force=true 只给用户手动「重新对账」；自动路径一律 force=false。 */
+  function runNumbers(force) {
+    if (!currentJob || isReconciling) return false;
+    var job = currentJob;
+    if (!force) {
+      var hit = readNumbersCache(job);
+      if (hit) {
+        renderNumbers(hit.j, hit.at, true);
+        var b0 = document.getElementById("btnNum");
+        b0.disabled = false;
+        b0.textContent = "重新对账";
+        b0.setAttribute("data-done", "1");
+        return false;
+      }
+    }
+    if (numbersTimer) clearTimeout(numbersTimer);
+    var btn = document.getElementById("btnNum");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span> 准备对账…';
+    document.getElementById("numBody").innerHTML =
+      '<div class="empty"><span class="spin"></span> 已排队，500ms 内不重复触发…</div>';
+    numbersTimer = setTimeout(function () {
+      numbersTimer = null;
+      if (currentJob === job) doNumbers(job);
+    }, 500);
+    return true;
+  }
+
+  /* 自动对账入口：显式 ?auto_numbers=1 才自动跑；滚动/刷新重复调用会被缓存与锁拦住。 */
+  function autoNumbers() {
+    if (!currentJob) return;
+    runNumbers(false);
+  }
+
+  /* ---------- 本机记录：继续上次 / 最近 4 条 ---------- */
+  function readLocal(k, dft) {
+    try { return JSON.parse(localStorage.getItem(k) || "null") || dft; } catch (e) { return dft; }
+  }
+
+  function loadLocal() {
+    var last = readLocal("qz_last", null);
+    var box = document.getElementById("lastBox");
+    if (last && last.href) {
+      box.innerHTML =
+        '<div class="last">' +
+          '<div>' +
+            '<div class="lab">上次走到</div>' +
+            '<div class="line">' + esc(last.line || "") + ' › ' + esc(last.step || "") + '</div>' +
+            '<div class="t">' + esc(last.title || last.step || "上次的页面") + '</div>' +
+            '<div class="m">' + esc(safeHref(last.href)) + ' ｜ ' + esc(ago(last.t)) + '</div>' +
+          '</div>' +
+          '<a class="go" href="' + esc(safeHref(last.href)) + '">接着走 →</a>' +
+        '</div>';
+    } else {
+      box.innerHTML = '<div class="last-empty">还没有「上次」记录。从下面任选一条业务线，走一步就会自动记下。</div>';
+    }
+
+    var recent = readLocal("qz_recent", []);
+    if (!Array.isArray(recent)) recent = [];
+    var list = document.getElementById("recentList");
+    if (!recent.length) {
+      list.innerHTML = '<div class="empty">还没有任务记录。走任意一条业务线后，这里会自动出现最近 4 条。</div>';
+    } else {
+      list.innerHTML = recent.slice(0, 4).map(function (x) {
+        return '<a class="r-item" href="' + esc(safeHref(x.href)) + '">' +
+          '<span class="r-t">' + esc(x.title || "任务") + '</span>' +
+          '<span class="r-m">' + esc(x.meta || "") + '</span>' +
+          '<span class="r-time">' + esc(ago(x.t)) + '</span></a>';
+      }).join("");
+    }
+  }
+
+  /* ---------- 5 条业务线 ---------- */
+  var LINES = [
+    { no: 1, name: "单篇体检", start: "/kb/selfcheck", steps: "选论文 → 看证据 → 读原文 → 改进建议" },
+    { no: 2, name: "整包检查", start: "/pkg", steps: "上传申报包 → 分诊结果 → 数字对账 → 评审意见" },
+    { no: 3, name: "文献工作", start: "/kb", steps: "检索 → 读原文 → 搭骨架 → 查漏引" },
+    { no: 4, name: "选题评估", start: "/judge", steps: "输入选题 → 评估结果 → 转成骨架" },
+    { no: 5, name: "同行基线", start: "/kb/baseline", steps: "选领域 → 20 项分布 → 查自己的论文" }
+  ];
+
+  function renderLines() {
+    document.getElementById("lineList").innerHTML = LINES.map(function (l) {
+      return '<a class="ln" href="' + l.start + '">' +
+        '<span class="no">' + l.no + '</span>' +
+        '<span class="body"><span class="n">' + l.name + '</span>' +
+        '<span class="p">' + l.steps + '</span></span>' +
+        '<span class="st">第 1 步 →</span></a>';
+    }).join("");
+  }
+
+  /* ---------- 刷新 ---------- */
+  function refreshAll() {
+    loadStats();
+    loadLive();
+    loadLib();
+    loadRuns();
+    loadLocal();
+  }
+
+  /* ---------- 兼容旧 hash 入口 ---------- */
+  function legacyHash() {
+    var MAP = {
+      selfcheck: "/kb/selfcheck", pkg: "/pkg", kb: "/kb", outline: "/outline",
+      evidence: "/evidence", baseline: "/kb/baseline", missing: "/kb/missing",
+      review: "/review", v15: "/judge", judge: "/judge",
+      insights: "/kb/insights", portrait: "/kb/portrait", weekly: "/weekly",
+      eval: "/eval", runs: "/runs"
+    };
+    var h = (location.hash || "").replace(/^#\/?/, "").split("?")[0];
+    if (MAP[h]) location.replace(MAP[h]);
+  }
+
+  /* ---------- 左侧导航：高亮 + 移动端折叠（Bug1/Bug2） ---------- */
+  function initRail() {
+    var rail = document.getElementById("wbRail");
+    var burger = document.getElementById("wbBurger");
+    var scrim = document.getElementById("wbScrim");
+    if (!rail || !burger) return;
+    var here = (location.pathname || "/").replace(/\/+$/, "") || "/";
+    Array.prototype.forEach.call(rail.querySelectorAll("a.ni[data-nav]"), function (a) {
+      var target = (a.getAttribute("data-nav") || "").replace(/\/+$/, "") || "/";
+      var on = here === target || (target !== "/kb" && here.indexOf(target + "/") === 0);
+      if (on) { a.classList.add("on"); a.setAttribute("aria-current", "page"); }
+    });
+    function setOpen(open) {
+      rail.classList.toggle("open", open);
+      burger.setAttribute("aria-expanded", open ? "true" : "false");
+      burger.setAttribute("aria-label", open ? "关闭主导航" : "打开主导航");
+      if (scrim) scrim.hidden = !open;
+      document.body.classList.toggle("rail-open", open);
+    }
+    burger.addEventListener("click", function (e) {
+      e.preventDefault();
+      setOpen(!rail.classList.contains("open"));
+    });
+    if (scrim) scrim.addEventListener("click", function () { setOpen(false); });
+    Array.prototype.forEach.call(rail.querySelectorAll("a"), function (a) {
+      a.addEventListener("click", function () { if (window.matchMedia("(max-width:1000px)").matches) setOpen(false); });
+    });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") setOpen(false); });
+    window.addEventListener("resize", function () { if (window.innerWidth > 1000) setOpen(false); });
+    setOpen(false);
+    window.qzRail = { open: function () { setOpen(true); }, close: function () { setOpen(false); },
+                      isOpen: function () { return rail.classList.contains("open"); } };
+  }
+
+  function init() {
+    // 对外只读/调试入口：自动对账与手动对账同一套锁与缓存
+    window.qzAutoNumbers = autoNumbers;
+    window.qzRunNumbers = runNumbers;
+    initRail();
+    renderLines();
+    loadLocal();
+    loadStats();
+    loadLive();
+    loadLib();
+    loadRuns();
+    document.getElementById("btnRefresh").onclick = refreshAll;
+    document.getElementById("btnDeep").onclick = runReview;
+    document.getElementById("btnNum").onclick = function () { runNumbers(true); };
+    if (!window.__wbLiveTimer) window.__wbLiveTimer = setInterval(loadLive, 30000);
+    legacyHash();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+})();
+</script>
+<script src="/static/qz-nav.js"></script>
+</body>
+</html>

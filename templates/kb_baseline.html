@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>缺陷-同行基线 · 群智</title>
+<link rel="stylesheet" href="/static/wb.css">
+<style>
+  .bar{height:6px;background:var(--paper-2);border-radius:4px;overflow:hidden;margin-top:4px}
+  .bar>i{display:block;height:100%;background:var(--accent)}
+  .bar.univ>i{background:var(--dim)}
+  .bar.min>i{background:var(--teal)}
+  td.num{font-family:var(--mono);text-align:right;white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="page" style="max-width:1080px;margin:0 auto">
+  <div class="page-head">
+    <h1>缺陷 · 同行基线</h1>
+    <div class="lead">每个缺陷在库内的出现率。≥80% 属“普遍做法”（不建议当必改）；50–80% 多数同行；&lt;50% 真缺陷。</div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+      <select id="field"><option value="">全库</option></select>
+      <select id="venue" title="对照群体">
+        <option value="">对照：全库（有特征 25.9 万）</option>
+        <option value="top">对照：顶会（有特征 6.1 万）</option>
+        <option value="arxiv">对照：arXiv 预印本（有特征 15.8 万）</option>
+        <option value="peer">对照：有评审（有特征 1.3 万）</option>
+      </select>
+      <button class="btn accent" id="go">查询</button>
+      <span class="hint" id="meta" style="margin:0"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <!-- QBUG-016：手机上表格在自己的容器里横向滚动，不被 body 裁切 -->
+    <div class="table-scroll">
+    <table class="t">
+      <thead><tr><th>缺陷特征</th><th class="num">论文数</th><th class="num">出现率</th><th>判定</th><th style="width:26%">分布</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="5" class="empty">加载中…</td></tr></tbody>
+    </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const KEY = "__QZ_DEMO_KEY__";
+const $ = s => document.querySelector(s);
+const esc = s => String(s==null?"":s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const num = n => n==null?"—":Number(n).toLocaleString("zh-CN");
+const LABEL = {universal:"普遍做法", majority:"多数同行", minority:"真缺陷"};
+// QBUG-013 同源：基线表也不再直印内部英文字段名
+const NAME = {seed:"报告随机种子",ci:"报告置信区间/误差条",ablation:"做消融实验",code:"公开代码",
+  hyperparameter:"报告超参",significance:"做显著性检验",multiple_runs:"多次运行取平均",
+  limitations:"讨论局限性",baseline_table:"基线对比表",dataset_stats:"数据集统计",
+  compute_budget:"算力开销",human_eval:"人工评测",cross_val:"交叉验证",released_data:"公开数据",
+  ethics:"伦理讨论",claim_hedging:"对结论留有余地/不夸大",related_work_table:"相关工作对比表",
+  sota_compare:"与 SOTA 数值对比",novelty_statement:"明确新颖性陈述",threat_validity:"讨论效度威胁"};
+const nameOf = f => NAME[f] || f;
+
+function row(feat, d){
+  const pct = Math.round((d.rate||0)*100);
+  const v = d.verdict || "minority";
+  const cls = v==="universal"?"badge dim":(v==="majority"?"badge info":"badge ok");
+  const barCls = v==="universal"?"bar univ":(v==="majority"?"bar":"bar min");
+  return `<tr>
+    <td title="${esc(feat)}">${esc(nameOf(feat))}</td>
+    <td class="num">${num(d.papers)}</td>
+    <td class="num"><b>${pct}%</b></td>
+    <td><span class="bdg ${v==="universal"?"dim":(v==="majority"?"info":"ok")}">${LABEL[v]||v}</span></td>
+    <td><div class="${barCls}"><i style="width:${Math.min(pct,100)}%"></i></div></td>
+  </tr>`;
+}
+
+const VLABEL = {"":"全库","top":"顶会","arxiv":"arXiv 预印本","peer":"有评审"};
+let LOAD_SEQ = 0;  // 2026-11-22：快速切换下拉框时丢弃过期响应，避免旧结果覆盖新结果
+
+async function load(){
+  const seq = ++LOAD_SEQ;
+  const f = $("#field").value;
+  const v = $("#venue").value;
+  $("#rows").innerHTML = '<tr><td colspan="5" class="empty">加载中…</td></tr>';
+  try{
+    let url = "/api/kb/defect_baseline";
+    const qs = [];
+    if (v) qs.push("venue="+encodeURIComponent(v));
+    // 2026-11-22 BUG-007：后端支持 field×venue 交叉，之前这里 `&& !v` 把领域静默丢弃。
+    if (f) qs.push("field="+encodeURIComponent(f));
+    if (qs.length) url += "?" + qs.join("&");
+    const j = await (await fetch(url, {cache:"no-store"})).json();
+    if (seq !== LOAD_SEQ) return;  // 已有更新的请求，丢弃本次
+    if(!j.ok) throw new Error(j.detail || "失败");
+    let feats;
+    if (f) {
+      // 领域（单独或与分层交叉）：后端都放在 features 里
+      feats = j.features || {};
+    } else if (v) {
+      feats = j.overall || {};
+    } else {
+      feats = j.overall || {};
+    }
+    const entries = Object.entries(feats).sort((a,b)=>(b[1].rate||0)-(a[1].rate||0));
+    if (!entries.length) {
+      // QBUG-005：0 篇时给明确空态，而不是只显示「0 篇」让人误以为下拉坏了。
+      var why = f
+        ? ('领域 <b>' + esc(f) + '</b> 在「' + esc(VLABEL[v] || "全库") + '」口径下没有可对照特征' +
+           '（接口 papers=' + num(j.papers || 0) + '）。换一个领域或把对照切回全库再试。')
+        : ('该口径暂无特征数据（接口 papers=' + num(j.papers || j.total_papers || 0) + '）。');
+      $("#rows").innerHTML = '<tr><td colspan="5" class="empty">' + why + '</td></tr>';
+    } else {
+      $("#rows").innerHTML = entries.map(([k,d])=>row(k,d)).join("");
+    }
+    // 元信息
+    let meta = "";
+    if (v && f) {
+      // 交叉过滤：后端返回 papers=该领域×该分层的论文数
+      meta = `对照：${VLABEL[v]||v} × ${f}（${num(j.papers || (j.field_value && j.field_value.n) || 0)} 篇）`;
+      if (j._filtered_by && String(j._filtered_by).indexOf("unfiltered") >= 0)
+        meta += `　⚠️ 该分层未生效：${j._filtered_by}`;
+    } else if (v) {
+      meta = `对照：${VLABEL[v]||v}（${num(j.venue_n||0)} 篇，有特征）`;
+    } else if (f) {
+      meta = `对照：${f}（${num(j.field_value && j.field_value.n || j.papers || 0)} 篇，有特征）`;
+    } else {
+      meta = `对照：全库（${num(j.total_papers)} 篇，有特征）`;
+    }
+    if (j.call_id) {
+      meta += "　call_id " + j.call_id;
+    }
+    $("#meta").textContent = meta;
+  }catch(e){
+    if (seq !== LOAD_SEQ) return;
+    $("#rows").innerHTML = `<tr><td colspan="5" class="empty">失败：${esc(e.message)}</td></tr>`;
+  }
+}
+
+async function init(){
+  load();
+  // 线 5 第 2 步：?view=dist → 直接看 20 项分布
+  if (new URLSearchParams(location.search).get("view") === "dist") {
+    setTimeout(function () {
+      var r = document.getElementById("rows");
+      if (r) r.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 400);
+  }
+  try{
+    const j = await (await fetch("/api/kb/defect_baseline", {cache:"no-store"})).json();
+    const sel = $("#field");
+    Object.keys(j.fields||{}).forEach(f=>{
+      const o = document.createElement("option");
+      o.value = f; o.textContent = `${f}（${num(j.fields[f])} 篇）`;
+      sel.appendChild(o);
+    });
+  }catch(e){}
+  $("#go").onclick = load;
+  $("#field").onchange = load;
+  $("#venue").onchange = load;
+}
+init();
+</script>
+<script src="/static/qz-nav.js"></script>
+</body>
+</html>

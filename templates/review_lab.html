@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>综述工作区 · 群智</title>
+<style>
+  :root{--ink:#15181D;--ink2:#4A5158;--dim:#8A9099;--line:#E6E1D8;--paper:#FAF6F0;
+        --accent:#C2402B;--ok:#2F7D5A;--mono:"JetBrains Mono",Consolas,monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+       font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px 20px 40px}
+  .head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--ink2);font-size:13px}
+  .search{display:flex;gap:8px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px}
+  .search input{flex:1;border:0;outline:0;padding:9px 10px;font-size:14px;background:transparent}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 15px;cursor:pointer;font-size:13.5px}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0;font-size:13px;color:var(--ink2)}
+  .table{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  table{width:100%;border-collapse:collapse}
+  th{text-align:left;font-size:11.5px;color:var(--dim);font-weight:600;padding:9px 10px;border-bottom:1px solid var(--line);background:#fcf9f4}
+  td{padding:9px 10px;border-bottom:1px solid #f3efe8;font-size:13px;vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  .t{font-weight:600;line-height:1.45}
+  .m{color:var(--dim);font-size:11.5px;margin-top:3px}
+  .pill{display:inline-block;font-size:11px;border-radius:999px;padding:1px 7px;border:1px solid var(--line);background:#faf7f1;color:var(--ink2)}
+  .pill.warn{color:var(--accent);border-color:#f0d3cc;background:#fdf5f3}
+  input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent)}
+  .hint{font-size:12.5px;color:var(--dim);margin-top:10px;line-height:1.7}
+  .empty{padding:26px;text-align:center;color:var(--dim);font-size:13px}
+  @media(max-width:820px){th:nth-child(4),td:nth-child(4){display:none}}
+
+  /* 选题评估 2026-11-19 */
+  .topic-box{margin-top:18px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px}
+  .tb-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  .tb-head h3{margin:0;font-size:15px}
+  .tb-sub{font-size:12px;color:var(--dim)}
+  .topic-box textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:14px/1.7 inherit;resize:vertical;outline:none}
+  .topic-box textarea:focus{border-color:rgba(194,64,43,.45);box-shadow:0 0 0 3px rgba(194,64,43,.08)}
+  .tb-foot{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
+  .tb-refs{flex:1;font-size:12px;color:var(--dim)}
+  .qt-out{margin-top:14px;font-size:13.5px;line-height:1.8}
+  .qt-out .qt-card{background:#FAF6F0;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;white-space:pre-wrap}
+  .qt-out .qt-verdict{font-weight:700;margin-bottom:6px}
+  .qt-out .qt-verdict.risk{color:#B23B2E}
+  .qt-out .qt-verdict.ok{color:#2F7D4F}
+  .qt-out .qt-meta{font-size:11.5px;color:var(--dim);margin-top:8px}
+  .qt-out .spin{display:inline-block;width:12px;height:12px;border:2px solid #ddd;border-top-color:#C2402B;border-radius:50%;animation:qspin .8s linear infinite;vertical-align:-2px}
+  @keyframes qspin{to{transform:rotate(360deg)}}
+
+  .tb-what{font-size:12px;color:var(--ink2);background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px 11px;margin-bottom:9px;line-height:1.7}
+  .tb-what b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div>
+      <h1>综述工作区</h1>
+      <div class="sub">从群智库选题 → 导出 BibTeX → 进综述台做聚类、精读矩阵、生成综述草稿</div>
+    </div>
+    <a class="btn primary" href="/reviewbench/" target="_blank" rel="noopener">打开综述台 ↗</a>
+  </div>
+
+  <div class="search">
+    <input id="q" placeholder="输入主题，例如：latent video diffusion / 大模型评测 / 检索增强生成" value="latent video diffusion">
+    <button class="btn primary" id="go">检索</button>
+  </div>
+  <div class="bar">
+    <span id="stat">输入主题后检索</span>
+    <span style="flex:1"></span>
+    <button class="btn" id="export" disabled>导出 BibTeX</button>
+    <button class="btn" id="clear" disabled>清空选择</button>
+  </div>
+
+  <div class="table">
+    <table>
+      <thead><tr><th style="width:34px"></th><th>标题</th><th style="width:64px">年份</th><th style="width:88px">领域</th><th style="width:96px">体检记录</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="5" class="empty">上面输入主题，回车或点「检索」</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="topic-box" id="topicBox">
+    <div class="tb-head">
+      <h3>有了想法？先评一下风险</h3>
+      <span class="tb-sub">交给 v15 决策预演：6 个角色（方法/数据/审稿人/伦理…）从不同立场审你的想法，约 30 秒–3 分钟</span>
+    </div>
+    <div class="tb-what">
+      你会得到：<b>结论</b>（做 / 不做 / 有条件做）＋ <b>触发的判断规则</b>＋ <b>评审分歧</b>＋ <b>未核验的说法</b>＋ <b>建议下一步</b>
+    </div>
+    <textarea id="qt-idea" rows="3" placeholder="用一句话写清你的初步想法，例如：用扩散模型做视频超分，但只在小数据集上验证"></textarea>
+    <div class="tb-foot">
+      <span id="qt-refs" class="tb-refs">未选文献（可先在表格里勾选，作为背景）</span>
+      <button class="btn primary" id="qt-go">评估选题风险</button>
+    </div>
+    <div id="qt-out" class="qt-out"></div>
+  </div>
+
+  <div class="hint">
+    数据来自群智论文库（59.5 万篇 CS 论文、76.8 万个从真实评审抽取的问题线索）。「体检记录」是该论文在库内被审出的问题条数（显示「未审」表示还没跑过，不代表没问题）——
+    这也是我们和通用文献工具的区别：<b>选题时就带着体检结果</b>。<br>
+    导出后：打开综述台 → 把 .bib 拖进页面（或点「数据与体检」导入）。
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const KEY = "__QZ_DEMO_KEY__";
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let items = [];
+const sel = new Set();
+
+async function doSearch() {
+  const q = $("#q").value.trim();
+  if (!q) return;
+  $("#rows").innerHTML = '<tr><td colspan="5" class="empty">检索中…</td></tr>';
+  try {
+    const r = await fetch(`/api/kb/search?key=${KEY}`, {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({q, limit: 20})
+    });
+    const j = await r.json();
+    items = j.items || [];
+    render();
+    $("#stat").textContent = `「${q}」共 ${j.total ?? items.length} 条，显示前 ${items.length} 条`;
+  } catch (e) {
+    $("#rows").innerHTML = `<tr><td colspan="5" class="empty">失败：${esc(e.message)}</td></tr>`;
+  }
+}
+
+function render() {
+  if (!items.length) {
+    $("#rows").innerHTML = '<tr><td colspan="5" class="empty">没有结果，换个说法试试（建议用英文关键词）</td></tr>';
+    return;
+  }
+  $("#rows").innerHTML = items.map((x, i) => `
+    <tr>
+      <td><input type="checkbox" data-i="${i}" ${sel.has(x.pid) ? "checked" : ""}></td>
+      <td>
+        <div class="t">${esc(x.title)}</div>
+        <div class="m">${esc(x.pid)}${x.venue ? " · " + esc(x.venue) : ""}${x.decision && x.decision !== "NA" ? " · " + esc(x.decision) : ""}</div>
+      </td>
+      <td>${x.year ?? "—"}</td>
+      <td><span class="pill">${esc(x.field || "—")}</span></td>
+      <td>${x.n_issues ? `<span class="pill warn">${x.n_issues} 条</span>` : '<span class="m" title="库内尚未对该篇做过体检">未审</span>'}</td>
+    </tr>`).join("");
+  document.querySelectorAll('input[type=checkbox][data-i]').forEach(cb => {
+    cb.onchange = () => {
+      const it = items[+cb.dataset.i];
+      if (cb.checked) sel.add(it.pid); else sel.delete(it.pid);
+      sync();
+    };
+  });
+  sync();
+}
+
+function sync() {
+  const n = sel.size;
+  $("#export").disabled = n === 0;
+  $("#clear").disabled = n === 0;
+  $("#stat").textContent = n ? `已选 ${n} 篇` : "未选择";
+}
+
+$("#go").onclick = doSearch;
+doSearch();  // 打开即给一个示例结果
+$("#q").addEventListener("keydown", e => { if (e.key === "Enter") doSearch(); });
+$("#clear").onclick = () => { sel.clear(); render(); };
+$("#export").onclick = () => {
+  const pids = [...sel].join(",");
+  window.location.href = `/api/review/bib?pids=${encodeURIComponent(pids)}`;
+};
+
+/* ===== 选题风险评估（2026-11-19 新增）===== */
+(function () {
+  const KEY = "__QZ_DEMO_KEY__";
+  const ta = document.getElementById("qt-idea");
+  const refsEl = document.getElementById("qt-refs");
+  const btn = document.getElementById("qt-go");
+  const out = document.getElementById("qt-out");
+  if (!ta || !btn) return;
+
+  function selectedTitles() {
+    try {
+      return [...document.querySelectorAll("input[type=checkbox][data-i]")]
+        .filter(cb => cb.checked)
+        .map(cb => {
+          const tr = cb.closest("tr");
+          const t = tr && tr.querySelector(".t");
+          return t ? t.textContent.trim() : "";
+        })
+        .filter(Boolean);
+    } catch (e) { return []; }
+  }
+
+  function refreshRefs() {
+    const ts = selectedTitles();
+    refsEl.textContent = ts.length ? ("已选 " + ts.length + " 篇作为背景") : "未选文献（可先在表格里勾选，作为背景）";
+  }
+  document.addEventListener("change", refreshRefs);
+  refreshRefs();
+
+  btn.onclick = async function () {
+    const idea = (ta.value || "").trim();
+    if (!idea) { ta.focus(); return; }
+    const refs = selectedTitles();
+    const bg = refs.length ? ("参考这批文献：\n" + refs.map((t, i) => (i + 1) + ". " + t).join("\n")) : "";
+
+    btn.disabled = true;
+    out.innerHTML = '<div class="qt-card" id="qt-wait"><span class="spin"></span> 正在预演…</div>';
+    var __qs = [
+      "① 6 个角色各自读你的想法和文献…",
+      "② 从方法/数据/伦理/审稿人立场提反对意见…",
+      "③ 交叉质询，标记分歧点…",
+      "④ 核对哪些说法没有证据支撑…",
+      "⑤ 汇总成结论与下一步建议…"
+    ];
+    var __qi = 0;
+    if (window.__qtTimer) clearInterval(window.__qtTimer);
+    window.__qtTimer = setInterval(function () {
+      var el = document.getElementById("qt-wait");
+      if (!el) { clearInterval(window.__qtTimer); return; }
+      if (__qi >= __qs.length) { clearInterval(window.__qtTimer); return; }
+      el.innerHTML = '<span class="spin"></span> ' + __qs[__qi++];
+    }, 6000);
+
+    try {
+      const r = await fetch("/api/v15/rehearse?key=" + encodeURIComponent(KEY), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: idea, bg: bg, field: "" })
+      });
+      const j = await r.json();
+      if (window.__qtTimer) { clearInterval(window.__qtTimer); window.__qtTimer = null; }
+      if (!r.ok) throw new Error(j.detail || ("HTTP " + r.status));
+      render(j);
+    } catch (e) {
+      if (window.__qtTimer) { clearInterval(window.__qtTimer); window.__qtTimer = null; }
+      out.innerHTML = '<div class="qt-card" style="color:#B23B2E">评估失败：' + (e.message || e) + '</div>';
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
+  function render(j) {
+    const parts = [];
+
+    // 1) 结论（recommendation 是主对象）
+    const rec = j.recommendation;
+    let verdict = "";
+    let reasons = [];
+    let actions = [];
+    if (typeof rec === "string") {
+      verdict = rec;
+    } else if (rec && typeof rec === "object") {
+      verdict = rec.verdict || rec.conclusion || rec.title || "";
+      reasons = rec.reasons || rec.risks || rec.concerns || [];
+      actions = rec.actions || rec.next_steps || rec.suggestions || [];
+    }
+    if (!verdict && j.ok === false && j.error) verdict = "预演未完成：" + j.error;
+
+    const isRisk = /风险|不建议|谨慎|不可行|不建议做|建议放弃|weak|risk|caution/i.test(String(verdict));
+    parts.push('<div class="qt-card"><div class="qt-verdict ' + (isRisk ? "risk" : "ok") + '">' +
+      (isRisk ? "⚠ " : "✓ ") + escHtml(String(verdict).slice(0, 400)) + '</div></div>');
+
+    // 2) 规则命中（rules）
+    if (Array.isArray(j.rules) && j.rules.length) {
+      parts.push('<div class="qt-card"><b>触发的判断规则（' + j.rules.length + '）</b>\n' + fmtList(j.rules) + '</div>');
+    }
+    // 3) 分歧点（disagreements）
+    if (Array.isArray(j.disagreements) && j.disagreements.length) {
+      parts.push('<div class="qt-card"><b>评审分歧（' + j.disagreements.length + '）</b>\n' + fmtList(j.disagreements) + '</div>');
+    }
+    // 4) 未验证/未支撑（unverified / unverified_claims）
+    const uv = [].concat(Array.isArray(j.unverified) ? j.unverified : [],
+                         Array.isArray(j.unverified_claims) ? j.unverified_claims : []);
+    if (uv.length) {
+      parts.push('<div class="qt-card"><b>未核验的说法（' + uv.length + '）</b>\n' + fmtList(uv) + '</div>');
+    }
+    // 5) 教练提示（coach_triggers）
+    if (Array.isArray(j.coach_triggers) && j.coach_triggers.length) {
+      parts.push('<div class="qt-card"><b>教练提示（' + j.coach_triggers.length + '）</b>\n' + fmtList(j.coach_triggers) + '</div>');
+    }
+    // 6) 引用（citations）
+    if (Array.isArray(j.citations) && j.citations.length) {
+      parts.push('<div class="qt-card"><b>预演引用的文献（' + j.citations.length + '）</b>\n' + fmtList(j.citations) + '</div>');
+    }
+    // 7) 兜底：什么都没匹配上
+    if (parts.length === 1 && !verdict) {
+      parts.push('<div class="qt-card"><b>预演返回</b>\n' + escHtml(JSON.stringify(j, null, 1).slice(0, 1200)) + '</div>');
+    }
+
+    parts.push('<div class="qt-meta">来源：v15 决策预演 · ' + escHtml(j.at || new Date().toLocaleString("zh-CN")) + '</div>');
+    out.innerHTML = parts.join("");
+  }
+
+  function fmtList(arr) {
+    return arr.slice(0, 8).map((x, i) => {
+      if (typeof x === "string") return "  " + (i + 1) + ". " + escHtml(x.slice(0, 220));
+      const t = x.text || x.claim || x.title || x.reason || x.quote || JSON.stringify(x);
+      const extra = x.severity || x.level || x.role || "";
+      return "  " + (i + 1) + ". " + (extra ? "[" + escHtml(String(extra)) + "] " : "") + escHtml(String(t).slice(0, 220));
+    }).join("\n");
+  }
+
+  function escHtml(s) {
+    return String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  }
+})();
+
+</script>
+</body>
+</html>
