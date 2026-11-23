@@ -114,19 +114,22 @@ https://qunzhi.team:8443/portal
 git clone git@github.com:fajstar/qunzhiv18.git
 cd qunzhiv18
 
-# 2. 装依赖
-python3 -m venv venv
-source venv/bin/activate
+# 2. 建虚拟环境（可选但推荐）
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+
+# 3. 装依赖
 pip install -r requirements.txt
 
-# 3. 配置（复制模板，填你自己的 key）
+# 4. 配置（复制模板，填你自己的 key）
 cp .env.example .env
 # 编辑 .env，填 DEEPSEEK_API_KEY / GLM_API_KEY / QZ_ADMIN_KEY
 
-# 4. 启动
+# 5. 启动
 python main_gateway.py
 # 打开 http://127.0.0.1:5020/portal
 ```
+
+依赖清单见 [requirements.txt](requirements.txt)，由仓库内所有 `.py` 的第三方 import 扫描生成（`PyMuPDF` 的 import 名是 `fitz`），版本一律用下界约束。
 
 **注意**：完整论文库（12 GB）不在仓库里，需要自己导入或下载公开快照。
 
@@ -243,8 +246,11 @@ MIT License —— 见 [LICENSE](LICENSE)
 ## 开发与测试
 
 ```bash
+pip install -r requirements.txt   # 已装过可跳过
 pip install pytest
 python -m pytest -q tests
 ```
 
 测试只覆盖纯函数模块（`complexity`、`review_anchors`、`input_intent`、`privacy_scrubber`），**不联网**、不调用任何外部 API。
+
+CI 会在每次 push（以及每个 PR）时跑 `pytest -q tests`，见 [.github/workflows/test.yml](.github/workflows/test.yml)。

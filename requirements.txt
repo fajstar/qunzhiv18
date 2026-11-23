@@ -1,0 +1,13 @@
+# 群智 v18 运行依赖：扫描仓库内全部 .py 的第三方 import 生成（PyMuPDF 的 import 名是 fitz），版本一律用下界约束
+fastapi>=0.110
+uvicorn>=0.27
+starlette>=0.37
+pydantic>=2.6
+httpx>=0.27
+requests>=2.31
+PyMuPDF>=1.24
+chromadb>=0.5
+rank-bm25>=0.2.2
+jieba>=0.42.1
+numpy>=1.24
+sentence-transformers>=2.7
