@@ -4,3 +4,9 @@ __pycache__/
 templates/*.bak*
 
 data/calls/
+
+# 回滚备份 / 补丁 / 调试脚本
+*.rolled_back_*
+*.pending.patch
+_find_auth.sh
+_show_guard.sh
