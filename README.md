@@ -207,7 +207,7 @@ qunzhi-local/
 
 源码**只通过 GitHub 发布**，不在 `qunzhi.team` 网页上放源码：
 
-`https://github.com/qunzhi-team/qunzhi-local`
+`https://github.com/fajstar/qunzhiv18/tree/local`
 
 如果链接暂时 404，说明仓库还没创建；本目录内容即为待推送的完整源码，可直接审计或自行 `git init`。
 
