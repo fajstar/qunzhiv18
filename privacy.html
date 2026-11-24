@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>隐私保证 · 群智 local</title>
+<meta name="description" content="群智 local 隐私声明：论文正文永不上传；规则在本地跑；云端只收特征名/文献标题/pid；LLM 由浏览器直连你自己的 key。附抓包自证方法。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f766e'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='white' font-family='sans-serif'%3E群%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="static/qz.css">
+<style>
+  .doc { max-width: 880px; margin: 0 auto; padding: 40px 24px 60px; }
+  .doc h1 { font-size: clamp(30px, 4vw, 42px); line-height: 1.2; margin: 0 0 12px; letter-spacing: -.02em; }
+  .doc h2 { font-size: 22px; margin: 40px 0 12px; padding-top: 8px; border-top: 1px solid var(--line); }
+  .doc h3 { font-size: 16px; margin: 24px 0 8px; }
+  .doc p, .doc li { color: var(--ink-2); }
+  .doc ul, .doc ol { padding-left: 22px; }
+  .doc li { margin: 5px 0; }
+  .pledge {
+    background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+    border-radius: 16px; padding: 20px 22px; margin: 22px 0;
+  }
+  .pledge strong { color: var(--accent-2); font-size: 19px; display: block; margin-bottom: 6px; }
+  .pledge p { margin: 0; }
+  .flow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 20px 0; }
+  .flow-card { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--panel); }
+  .flow-card b { display: block; margin-bottom: 4px; }
+  .flow-card span { font-size: 12.5px; color: var(--muted); }
+  .flow-card.ok { border-top: 4px solid var(--ok); }
+  .flow-card.cloud { border-top: 4px solid var(--indigo); }
+  .flow-card.llm { border-top: 4px solid var(--warn); }
+  table.matrix { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  table.matrix th, table.matrix td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.matrix th { background: var(--bg); font-size: 12px; color: var(--muted); }
+  table.matrix td.yes { color: var(--ok); font-weight: 700; }
+  table.matrix td.no { color: var(--danger); font-weight: 700; }
+  pre.req { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; overflow: auto; font-family: var(--mono); font-size: 12.5px; line-height: 1.6; }
+  .callout { border-left: 4px solid var(--warn); background: var(--warn-soft); padding: 12px 16px; border-radius: 0 10px 10px 0; margin: 16px 0; }
+  .callout p { margin: 0; }
+  .step { display: flex; gap: 12px; margin: 12px 0; }
+  .step-num { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 13px; }
+  .step div:last-child { flex: 1; }
+  .step b { display: block; margin-bottom: 2px; }
+  .back { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 18px; font-size: 14px; }
+  @media (max-width: 760px) { .flow { grid-template-columns: 1fr; } .doc { padding: 26px 16px 40px; } }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="index.html">
+      <span class="brand-mark" aria-hidden="true">群</span>
+      <span class="brand-text">群智 <b>local</b></span>
+    </a>
+    <nav class="topnav">
+      <a href="index.html">返回检查</a>
+      <a href="docs/隐私保证.md">Markdown 版</a>
+      <a href="docs/API.md">API</a>
+      <a href="README.md">README</a>
+    </nav>
+  </div>
+</header>
+
+<main class="doc">
+  <a class="back" href="index.html">← 返回检查页</a>
+  <h1>隐私保证</h1>
+  <p class="lede">这份页面只讲一件事：你的论文正文去哪了。结论是——它没有离开你的浏览器，除非你主动把它发给你自己的 LLM 服务商。</p>
+
+  <div class="pledge">
+    <strong>你的论文正文永远不会离开你的浏览器。</strong>
+    <p>规则检查：纯 JS 在本地跑。深度评审：你的浏览器直连 LLM 服务商（key 是你自己的）。我们只收到：特征名、文献标题、论文 id。我们收不到：正文、摘要、作者、邮箱。</p>
+  </div>
+
+  <h2>一、数据流：三种模式，三条边界</h2>
+  <div class="flow">
+    <div class="flow-card ok">
+      <b>纯本地</b>
+      <span>20 项规则 + T1/T2/T3 锚定。只加载本目录的 HTML/CSS/JS，0 个业务请求。断网照常工作。</span>
+    </div>
+    <div class="flow-card cloud">
+      <b>本地 + 云端公开统计</b>
+      <span>只调用 5 个 <code>/api/pub/*</code> 接口。请求体里只有特征名、领域、文献标题、pid、关键词。</span>
+    </div>
+    <div class="flow-card llm">
+      <b>本地 + 你自己的 LLM</b>
+      <span>浏览器直连你配置的服务商。正文只发往那一家；qunzhi.team 连请求都看不到。</span>
+    </div>
+  </div>
+
+  <h2>二、我们收到什么 / 收不到什么</h2>
+  <table class="matrix">
+    <thead><tr><th>数据</th><th>是否离开浏览器</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>论文正文 / 全文</td><td class="no">否（除非你开 LLM）</td><td>只存在于页面内存与文本框；刷新/关闭即消失。</td></tr>
+      <tr><td>摘要</td><td class="no">否</td><td>规则和锚定都在本地跑，摘要不单独发送。</td></tr>
+      <tr><td>作者 / 邮箱 / 单位</td><td class="no">否</td><td>接口字段白名单里没有这些字段；传了会被 400 拒绝。</td></tr>
+      <tr><td>特征名（如 seed / ci）</td><td class="yes">是（开云端时）</td><td>用于查同行缺失率，例如 <code>{"feat":"seed","field":"cs.LG"}</code>。</td></tr>
+      <tr><td>文献标题</td><td class="yes">是（开云端时）</td><td>公开信息；用于漏引分析，最多 50 条。</td></tr>
+      <tr><td>论文 id / 关键词</td><td class="yes">是（开云端时）</td><td>查 benchmark / 公开检索。</td></tr>
+      <tr><td>LLM key</td><td class="no">否</td><td>只存在你本机的 localStorage；请求头直接发给 LLM 服务商。</td></tr>
+    </tbody>
+  </table>
+
+  <h2>三、自己抓包验证（最关键的一节）</h2>
+  <p>不要相信任何口头承诺。按下面步骤，你能在 2 分钟内自己验证。</p>
+
+  <div class="step"><div class="step-num">1</div><div>
+    <b>打开 DevTools → Network</b>
+    <p>Chrome / Edge 按 F12，或右键「检查」。勾选 <em>Preserve log</em>，清空现有记录。</p>
+  </div></div>
+  <div class="step"><div class="step-num">2</div><div>
+    <b>关闭「云端公开统计」，粘贴正文，点「开始检查」</b>
+    <p>纯本地模式。Network 面板里应当只有本目录的静态资源（HTML/CSS/JS），没有任何 <code>qunzhi.team</code> 请求，也没有任何 LLM 请求。</p>
+  </div></div>
+  <div class="step"><div class="step-num">3</div><div>
+    <b>再打开「云端公开统计」，重新检查</b>
+    <p>这时只会出现 <code>https://qunzhi.team:8443/api/pub/baseline</code> 与 <code>/api/pub/missing_cites</code>。点开请求 → Payload，确认里面只有 <code>feat / field / refs</code>，没有正文。</p>
+  </div></div>
+  <div class="step"><div class="step-num">4</div><div>
+    <b>配置你自己的 LLM，点「深度评审」</b>
+    <p>Network 里会出现一个指向你填的 <code>base_url</code> 的请求（例如 <code>api.deepseek.com</code>），请求体里有正文；<strong>没有任何请求发往 qunzhi.team 携带正文</strong>。请求头的 <code>Authorization</code> 是你自己的 key，我们看不到。</p>
+  </div></div>
+  <div class="step"><div class="step-num">5</div><div>
+    <b>断网测试</b>
+    <p>关掉 Wi-Fi / 拔网线，刷新页面，点「载入示例 → 开始检查」。20 项规则与锚定照常出结果。这证明规则不依赖服务器。</p>
+  </div></div>
+
+  <h3>云端请求长什么样（真实字段，已脱敏）</h3>
+  <pre class="req">POST /api/pub/baseline
+{"feat": "seed", "field": "cs.LG"}
+
+POST /api/pub/missing_cites
+{"refs": ["Deep Residual Learning for Image Recognition",
+          "Attention Is All You Need"],
+ "field": "cs.CV", "siblings": 30}
+
+GET /api/pub/benchmark?pid=ax_2611.26510
+GET /api/pub/search?q=attention&amp;limit=10
+GET /api/pub/version</pre>
+  <p>如果你在这些请求体里看到 <code>text</code>、<code>abstract</code>、<code>author</code>、<code>email</code>，那是我们的 bug，请立刻停止使用并提 issue。服务端对这些字段是硬拒绝（HTTP 400），不是「忽略」。</p>
+
+  <h3>页面内的网络计数器</h3>
+  <p>检查页右上角有一个「本次检查 N 个请求」的小标签，设置弹窗里还有完整列表（只记 URL / 方法 / 状态码，不记请求体）。每次点「开始检查」会清零重计。它是给你做交叉验证用的，不是唯一证据——以 DevTools 为准。</p>
+
+  <h2>四、源码可审</h2>
+  <p>整个工具是纯静态 HTML/CSS/JS，没有构建步骤、没有压缩混淆、没有第三方 CDN。你可以直接读每一行：</p>
+  <ul>
+    <li><code>static/rules.js</code>：20 项规则的正则、为什么重要、怎么补。</li>
+    <li><code>static/anchor.js</code>：T1/T2/T3 锚定、参考文献解析。</li>
+    <li><code>static/qz.js</code>：所有交互与网络请求；搜索 <code>fetch(</code> 就能看到全部出口。</li>
+    <li><code>config.js</code>：默认配置；<code>file://</code> 下连 <code>config.json</code> 都不请求。</li>
+  </ul>
+  <p>源码仓库：<a href="https://github.com/qunzhi-team/qunzhi-local" target="_blank" rel="noopener">github.com/qunzhi-team/qunzhi-local</a>。如果链接暂时 404，说明仓库还没发布；本包内的源码与仓库一致，可直接审计本地文件。</p>
+
+  <h2>五、边界与诚实说明</h2>
+  <div class="callout"><p><strong>「正文不上传」有前提，我们不想含糊：</strong></p></div>
+  <ul>
+    <li><strong>LLM 模式例外</strong>：你主动点「深度评审」并确认后，正文会发给你配置的 LLM 服务商。它是否会留存、用于训练，取决于那家服务商的条款，不取决于我们。不想发就别开 LLM。</li>
+    <li><strong>浏览器扩展</strong>：如果你装了会读取页面内容的扩展，它理论上能看到文本框。请用干净的浏览器配置。</li>
+    <li><strong>HTTPS 终止</strong>：云端接口走 HTTPS；证书由部署方维护。若你看到证书警告，先别继续，核对证书再使用。</li>
+    <li><strong>服务器访问日志</strong>：云端可能记录 IP、时间、URL、状态码（运维必需），但不记录请求体中的论文内容——因为请求体里本来就没有正文。</li>
+    <li><strong>正则不是语义理解</strong>：规则只能发现「文中是否出现相关表述」，不能判断实验做得对不对。所有结论必须由人确认。</li>
+    <li><strong>CORS</strong>：部分 LLM 服务商不允许浏览器直连。失败时我们不会替你转发，只会提示你换服务商或使用本地 Ollama。</li>
+  </ul>
+
+  <h2>六、常见问题</h2>
+  <h3>为什么双击打开时不能自动读取 config.json？</h3>
+  <p>浏览器的同源策略禁止 <code>file://</code> 页面读取本地 JSON。纯本地模式不需要它；要用 config.json，请在本目录运行 <code>python -m http.server 8000</code>，再访问 <code>http://localhost:8000/?config=1</code>。默认不带参数时不读文件，避免 404。</p>
+  <h3>key 存在哪？</h3>
+  <p>只存在浏览器的 localStorage（键名 <code>qz_local_settings_v1</code>），不会写到文件、不会发给 qunzhi.team。公共电脑上用完请点「清除 key」。</p>
+  <h3>云端统计的数据从哪来？</h3>
+  <p>公开论文库的聚合统计（L1/L2 论文的特征分布、公开文献引用关系、公开 benchmark 数字）。接口不返回论文全文、摘要或作者。</p>
+  <h3>你们能保证「绝对安全」吗？</h3>
+  <p>不能，任何软件都不能。我们能保证的是：代码开源可审、请求字段有硬白名单、正文不进入云端代码路径、你可以用抓包和断网自己验证。剩下的风险（扩展、服务商条款、证书）已在上面列明。</p>
+
+  <p style="margin-top:36px"><a class="btn btn-primary" href="index.html">返回检查页</a>
+  <a class="btn" href="docs/隐私保证.md">读 Markdown 详细版</a></p>
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <div><strong>群智 local</strong> · v0.1 · MIT<div class="dim">正文不上传；结论必须由人确认。</div></div>
+    <div class="footer-links"><a href="index.html">检查</a><a href="README.md">README</a><a href="docs/API.md">API</a></div>
+  </div>
+</footer>
+</body>
+</html>

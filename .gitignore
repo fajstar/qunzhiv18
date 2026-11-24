@@ -1,0 +1,12 @@
+# 本地配置（可能含你自己的 LLM key）——绝对不要提交
+config.json
+.env
+.env.*
+
+# 系统/编辑器
+.DS_Store
+Thumbs.db
+*.log
+node_modules/
+__pycache__/
+*.pyc

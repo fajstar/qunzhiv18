@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>群智 local · 可核验的论文自查（本地版）</title>
+<meta name="description" content="把一篇论文变成一份每条都能点回原文的问题清单。论文正文永不上传，规则与锚定全部在浏览器本地运行。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f766e'/%3E%3Ctext x='32' y='44' font-size='34' text-anchor='middle' fill='white' font-family='sans-serif'%3E群%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="static/qz.css">
+</head>
+<body>
+<a class="skip" href="#main">跳到主内容</a>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="index.html" aria-label="群智 local 首页">
+      <span class="brand-mark" aria-hidden="true">群</span>
+      <span class="brand-text">群智 <b>local</b></span>
+    </a>
+    <div class="mode-badges" aria-label="当前模式">
+      <span class="badge badge-ok" id="badge-local" title="20 项规则 + T1/T2/T3 锚定，纯浏览器运行">纯本地规则</span>
+      <span class="badge" id="badge-cloud" title="只调用 5 个零隐私公开接口">云端基线</span>
+      <span class="badge" id="badge-llm" title="浏览器直连你自己的 LLM key">我的 LLM</span>
+      <span class="net-pill" id="net-pill" title="只统计本次检查期间发出的 fetch 请求">本次检查 0 个请求</span>
+    </div>
+    <nav class="topnav" aria-label="导航">
+      <a href="privacy.html">隐私保证</a>
+      <a href="docs/API.md" target="_blank" rel="noopener">API</a>
+      <a href="README.md" target="_blank" rel="noopener">README</a>
+      <button type="button" class="btn btn-ghost" id="btn-settings">设置</button>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero wrap">
+    <div class="hero-copy">
+      <h1>把一篇论文变成一份<br><em>每条都能点回原文</em>的问题清单</h1>
+      <p class="lede">20 项可复现性与统计严谨性检查，全部在浏览器本地跑；每条结论都标出 <abbr title="逐字命中原文，≥40 字符">T1</abbr> / <abbr title="部分命中或只锚到章节">T2</abbr> / <abbr title="原文找不到依据，直接拦掉">T3</abbr>，找不到出处的说法不会出现在报告里。</p>
+      <p class="privacy-line"><strong>你的论文正文永远不会离开你的浏览器。</strong> 云端只收到特征名、文献标题、论文 id。</p>
+    </div>
+    <div class="hero-figure" aria-hidden="true">
+      <div class="paper-stack">
+        <div class="paper-sheet back"></div>
+        <div class="paper-sheet mid"></div>
+        <div class="paper-sheet front">
+          <div class="ph-line w70"></div>
+          <div class="ph-line w95"></div>
+          <div class="ph-line w88"></div>
+          <div class="ph-line w60 anchor-line"><span>T1</span></div>
+          <div class="ph-line w92"></div>
+          <div class="ph-line w75"></div>
+          <div class="ph-line w40"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap grid">
+    <!-- ================= 输入 ================= -->
+    <section class="panel input-panel" aria-labelledby="input-title">
+      <div class="panel-head">
+        <h2 id="input-title">粘贴论文</h2>
+        <span class="counter" id="char-count">0 字</span>
+      </div>
+
+      <label class="sr-only" for="paper-text">论文正文</label>
+      <textarea id="paper-text" class="paper-input" spellcheck="false"
+        placeholder="把论文正文粘贴到这里（建议包含 Introduction / Experiments / Limitations / References）。&#10;&#10;摘要也可以，但只有摘要时很多项会「未检出」，锚定也会变少。&#10;&#10;正文只在这个文本框里，不会发往 qunzhi.team。"></textarea>
+
+      <div class="input-row">
+        <label class="field">
+          <span>领域</span>
+          <select id="field-select">
+            <option value="">自动（不限领域）</option>
+            <option value="cs.LG">cs.LG 机器学习</option>
+            <option value="cs.CL">cs.CL 计算语言学</option>
+            <option value="cs.CV">cs.CV 计算机视觉</option>
+            <option value="cs.AI">cs.AI 人工智能</option>
+            <option value="cs.RO">cs.RO 机器人</option>
+            <option value="cs.CR">cs.CR 安全</option>
+            <option value="cs.SE">cs.SE 软件工程</option>
+            <option value="cs.IR">cs.IR 信息检索</option>
+            <option value="stat.ML">stat.ML 统计机器学习</option>
+            <option value="cs.DC">cs.DC 分布式计算</option>
+            <option value="cs.HC">cs.HC 人机交互</option>
+            <option value="cs.SD">cs.SD 声音</option>
+          </select>
+        </label>
+        <label class="switch" title="关闭后不发出任何云端请求，纯本地模式">
+          <input type="checkbox" id="cloud-toggle">
+          <span class="switch-track" aria-hidden="true"></span>
+          <span>云端公开统计</span>
+        </label>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="btn btn-primary" id="btn-run">开始检查</button>
+        <button type="button" class="btn" id="btn-sample">载入示例</button>
+        <button type="button" class="btn btn-quiet" id="btn-clear">清空</button>
+      </div>
+      <p class="hint">规则与锚定在本地跑。勾选「云端公开统计」时，只发送：特征名、领域、你粘贴的参考文献标题。发送前可在浏览器 DevTools → Network 里核对。</p>
+
+      <details class="subbox" id="refs-box">
+        <summary>参考文献 <span class="dim" id="ref-count">（自动从 References 段提取）</span></summary>
+        <p class="hint">每行一条文献标题。只用于向云端问「同领域兄弟都引了、你可能漏了哪些」；标题是公开信息。可手动修正自动提取的结果。</p>
+        <textarea id="refs-text" class="refs-input" spellcheck="false" placeholder="Deep Residual Learning for Image Recognition&#10;Attention Is All You Need"></textarea>
+        <div class="subbox-actions">
+          <button type="button" class="btn btn-small" id="btn-extract-refs">重新从正文提取</button>
+          <span class="dim" id="refs-status"></span>
+        </div>
+      </details>
+
+      <details class="subbox" id="tools-box">
+        <summary>公开数据工具 <span class="dim">（Benchmark / 检索）</span></summary>
+        <div class="tool-row">
+          <label class="field grow">
+            <span>论文 id</span>
+            <input type="text" id="pid-input" placeholder="例如 ax_2611.26510" autocomplete="off">
+          </label>
+          <button type="button" class="btn btn-small" id="btn-arxiv">从正文识别 arXiv</button>
+          <button type="button" class="btn btn-small" id="btn-benchmark">查 Benchmark</button>
+        </div>
+        <div class="tool-row">
+          <label class="field grow">
+            <span>关键词检索公开库</span>
+            <input type="search" id="search-input" placeholder="例如 attention / diffusion policy" autocomplete="off">
+          </label>
+          <button type="button" class="btn btn-small" id="btn-search">检索</button>
+        </div>
+        <p class="hint">这两个工具只查询公开元数据，与你粘贴的正文无关。</p>
+      </details>
+    </section>
+
+    <!-- ================= 结果 ================= -->
+    <section class="panel result-panel" aria-labelledby="result-title">
+      <div class="panel-head">
+        <h2 id="result-title">检查结果</h2>
+        <div class="result-actions">
+          <button type="button" class="btn btn-small btn-quiet" id="btn-export" hidden>导出 Markdown</button>
+        </div>
+      </div>
+
+      <div class="empty" id="empty-state">
+        <div class="empty-mark" aria-hidden="true">T1</div>
+        <h3>还没有检查</h3>
+        <p>粘贴正文 → 点「开始检查」。<br>纯本地模式不需要网络，也不需要任何 key。</p>
+        <ul class="empty-list">
+          <li>20 项规则：可复现性、统计严谨、评审透明、表述</li>
+          <li>每条命中都锚回原文，标 T1 / T2；T3 直接拦掉</li>
+          <li>可选：云端同行基线、漏引候选、公开 benchmark</li>
+        </ul>
+      </div>
+
+      <div id="results" hidden>
+        <div class="summary-grid">
+          <div class="stat">
+            <div class="stat-num" id="stat-rules">0/20</div>
+            <div class="stat-label">规则检出</div>
+          </div>
+          <div class="stat">
+            <div class="stat-num t1" id="stat-t1">0</div>
+            <div class="stat-label">T1 逐字锚定</div>
+          </div>
+          <div class="stat">
+            <div class="stat-num t2" id="stat-t2">0</div>
+            <div class="stat-label">T2 部分锚定</div>
+          </div>
+          <div class="stat">
+            <div class="stat-num t3" id="stat-t3">0</div>
+            <div class="stat-label">T3 已拦截</div>
+          </div>
+        </div>
+
+        <div class="baseline-card" id="baseline-card" hidden>
+          <div class="baseline-head">
+            <span class="tag tag-cloud">云端基线</span>
+            <span class="dim" id="baseline-scope"></span>
+          </div>
+          <div class="baseline-body" id="baseline-body"></div>
+        </div>
+
+        <div class="tabs" role="tablist" aria-label="结果分类">
+          <button type="button" class="tab active" role="tab" aria-selected="true" data-tab="issues" id="tab-btn-issues">问题清单 <span class="tab-count" id="count-issues">0</span></button>
+          <button type="button" class="tab" role="tab" aria-selected="false" data-tab="hits" id="tab-btn-hits">已做到 <span class="tab-count" id="count-hits">0</span></button>
+          <button type="button" class="tab" role="tab" aria-selected="false" data-tab="cites" id="tab-btn-cites">漏引候选 <span class="tab-count" id="count-cites">0</span></button>
+          <button type="button" class="tab" role="tab" aria-selected="false" data-tab="bench" id="tab-btn-bench">Benchmark</button>
+          <button type="button" class="tab" role="tab" aria-selected="false" data-tab="llm" id="tab-btn-llm">深度评审</button>
+        </div>
+
+        <div class="tab-panel" id="tab-issues" role="tabpanel">
+          <div class="panel-note" id="issues-note" hidden></div>
+          <div id="issues-list" class="issue-list"></div>
+        </div>
+
+        <div class="tab-panel" id="tab-hits" role="tabpanel" hidden>
+          <div id="hits-list" class="issue-list"></div>
+        </div>
+
+        <div class="tab-panel" id="tab-cites" role="tabpanel" hidden>
+          <div id="cites-body" class="cites-body">
+            <p class="muted">检查完成后，如果正文里有参考文献，这里会显示同领域兄弟都引了、你可能漏了的文献。</p>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="tab-bench" role="tabpanel" hidden>
+          <div id="bench-body" class="bench-body">
+            <p class="muted">在上方输入公开论文 id，或从正文识别 arXiv 号，再点「查 Benchmark」。</p>
+          </div>
+          <div id="search-body" class="search-body"></div>
+        </div>
+
+        <div class="tab-panel" id="tab-llm" role="tabpanel" hidden>
+          <div class="llm-box">
+            <div class="llm-head">
+              <h3>用你自己的 LLM 做深度评审</h3>
+              <span class="tag" id="llm-mode-tag">未配置</span>
+            </div>
+            <p class="hint">浏览器<strong>直连</strong>你配置的 LLM 服务商，key 是你自己的，请求不经过 qunzhi.team。正文只会发给你选的那家服务商；超过 60,000 字符会截断。</p>
+            <div class="llm-actions">
+              <button type="button" class="btn btn-primary" id="btn-llm-run" disabled>深度评审</button>
+              <button type="button" class="btn" id="btn-open-llm-settings">配置 LLM</button>
+              <span class="dim" id="llm-status"></span>
+            </div>
+            <div id="llm-result"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="wrap privacy-strip">
+    <div>
+      <h2>为什么可以相信「正文没上传」</h2>
+      <p>不用听我们解释，直接抓包：打开 DevTools → Network，粘贴正文点检查。纯本地模式应当只有静态资源；开启云端后，只会看到 <code>qunzhi.team/api/pub/*</code> 且请求体里只有特征名/标题；开启 LLM 后，正文只出现在你自己配置的服务商请求里。</p>
+    </div>
+    <a class="btn btn-primary" href="privacy.html">看自证方法与隐私声明</a>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <div>
+      <strong>群智 local</strong> · v0.1 · MIT
+      <div class="dim">本地规则 + 公开统计；结论必须由人确认。不是论文代写，也不替代同行评审。</div>
+    </div>
+    <div class="footer-links">
+      <a href="privacy.html">隐私保证</a>
+      <a href="docs/隐私保证.md">隐私方法（Markdown）</a>
+      <a href="docs/API.md">API 文档</a>
+      <a href="README.md">README</a>
+    </div>
+  </div>
+</footer>
+
+<!-- ================= 设置 ================= -->
+<dialog id="settings-dialog" class="dialog" aria-labelledby="settings-title">
+  <form method="dialog" class="dialog-form">
+    <div class="dialog-head">
+      <h2 id="settings-title">设置</h2>
+      <button type="submit" class="icon-btn" aria-label="关闭设置">×</button>
+    </div>
+
+    <section class="dialog-section">
+      <h3>云端公开统计</h3>
+      <p class="hint">只调用 5 个零隐私接口；关掉后完全离线，所有云端按钮自动隐藏。</p>
+      <label class="field">
+        <span>API 根地址</span>
+        <input type="url" id="cfg-cloud-url" autocomplete="off" spellcheck="false">
+      </label>
+      <label class="switch">
+        <input type="checkbox" id="cfg-cloud-enabled">
+        <span class="switch-track" aria-hidden="true"></span>
+        <span>启用云端公开统计</span>
+      </label>
+      <div class="net-log">
+        <div class="net-log-head">
+          <strong>本次检查的网络请求</strong>
+          <span class="dim" id="net-summary">0 个</span>
+        </div>
+        <ol id="net-list" class="net-list"><li class="dim">还没有请求。</li></ol>
+        <p class="hint">只记录 URL / 方法 / 状态码，不记录请求体内容。</p>
+      </div>
+    </section>
+
+    <section class="dialog-section">
+      <h3>你自己的 LLM</h3>
+      <p class="hint">key 只保存在本机浏览器（localStorage），请求由浏览器直连服务商。不要提交到 git。</p>
+      <div class="two-col">
+        <label class="field">
+          <span>Provider</span>
+          <select id="cfg-llm-provider">
+            <option value="deepseek">DeepSeek</option>
+            <option value="openai">OpenAI 兼容</option>
+            <option value="ollama">本地 Ollama</option>
+            <option value="custom">其它（OpenAI 兼容）</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>模型</span>
+          <input type="text" id="cfg-llm-model" placeholder="deepseek-chat" autocomplete="off" spellcheck="false">
+        </label>
+      </div>
+      <label class="field">
+        <span>Base URL</span>
+        <input type="url" id="cfg-llm-base" placeholder="https://api.deepseek.com/v1" autocomplete="off" spellcheck="false">
+      </label>
+      <label class="field">
+        <span>API key（只存本机）</span>
+        <div class="secret-row">
+          <input type="password" id="cfg-llm-key" placeholder="留空则只用本地规则" autocomplete="off">
+          <button type="button" class="btn btn-small" id="btn-toggle-key">显示</button>
+        </div>
+      </label>
+      <label class="switch">
+        <input type="checkbox" id="cfg-remember-key">
+        <span class="switch-track" aria-hidden="true"></span>
+        <span>记住 key（localStorage；不勾则关闭页面即忘）</span>
+      </label>
+      <div class="dialog-actions">
+        <button type="button" class="btn" id="btn-llm-test">测试连接</button>
+        <button type="button" class="btn btn-quiet" id="btn-clear-key">清除 key</button>
+        <span class="dim" id="llm-test-status"></span>
+      </div>
+      <p class="hint">浏览器直连可能被服务商的 CORS 策略拦截。被拦时请换支持浏览器跨域的服务商，或用本地 Ollama；我们不会替你转发。</p>
+    </section>
+
+    <div class="dialog-foot">
+      <button type="submit" class="btn btn-primary" id="btn-save-settings">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ================= LLM 发送确认 ================= -->
+<dialog id="llm-confirm" class="dialog dialog-small" aria-labelledby="llm-confirm-title">
+  <form method="dialog" class="dialog-form">
+    <div class="dialog-head">
+      <h2 id="llm-confirm-title">把正文发给 LLM 服务商？</h2>
+      <button type="submit" class="icon-btn" aria-label="取消">×</button>
+    </div>
+    <p>这次请求会<strong>由你的浏览器直接发往</strong>：</p>
+    <p class="confirm-host" id="llm-confirm-host">—</p>
+    <p class="hint">请求包含：论文正文（<span id="llm-confirm-chars">0 字</span>）与评审提示词。不包含你的 qunzhi key，也不经过 qunzhi.team。</p>
+    <label class="switch">
+      <input type="checkbox" id="llm-confirm-ok">
+      <span class="switch-track" aria-hidden="true"></span>
+      <span>我知道正文会发给这家服务商</span>
+    </label>
+    <div class="dialog-foot">
+      <button type="button" class="btn btn-quiet" id="btn-llm-cancel">取消</button>
+      <button type="button" class="btn btn-primary" id="btn-llm-go" disabled>发送并评审</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="static/rules.js"></script>
+<script src="static/anchor.js"></script>
+<script src="config.js"></script>
+<script src="static/qz.js"></script>
+</body>
+</html>
