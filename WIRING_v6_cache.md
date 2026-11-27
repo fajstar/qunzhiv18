@@ -1,5 +1,10 @@
 # v6 缓存接线说明（**不要自动合并**）
 
+> 🚫 **部署目标：只有 139.155.129.66（用户 ubuntu，私钥 C:\共享\qunzhi-kit\keys\new_server）**
+> **禁止**部署到 134.175.145.241（算力节点）；**禁止**整文件覆盖服务器上的 `main_gateway.py`（有未提交改动）。
+> 详见 [DEPLOY_TARGET.md](DEPLOY_TARGET.md)。
+
+
 > 主服务器的 `main_gateway.py` 有你自己的一段代码，**本方案不覆盖它**。
 > 只做两件事：①放一个新文件 `review_cache.py`；②你方便时按下面的两处改动手工合并。
 > 合并前请先 `cp main_gateway.py main_gateway.py.bak_$(date +%Y%m%d_%H%M%S)`。

@@ -1,5 +1,10 @@
 # ⚠️ 已废弃：请改用 WIRING_v6_cache.md
 
+> 🚫 **部署目标：只有 139.155.129.66（用户 ubuntu，私钥 C:\共享\qunzhi-kit\keys\new_server）**
+> **禁止**部署到 134.175.145.241（算力节点）；**禁止**整文件覆盖服务器上的 `main_gateway.py`（有未提交改动）。
+> 详见 [DEPLOY_TARGET.md](DEPLOY_TARGET.md)。
+
+
 > 本文件描述的是「整文件覆盖 main_gateway.py」的旧方案，**不要执行**。
 > 主服务器（139.155.129.66）有自有代码，改用 `WIRING_v6_cache.md`（只加新文件 + 手工合并两处补丁）。
 
