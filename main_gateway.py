@@ -1272,7 +1272,7 @@ class ReviewV6Request(BaseModel):
 
 
 @app.post("/api/review/v6")
-def review_v6_evaluate(req: ReviewV6Request):
+def review_v6_evaluate(req: ReviewV6Request, refresh: bool = False):
     """v6 评审：成对强制选择 + 分维**三档**（强/中/弱/无依据，不求和）+ 风险栏 + 独有贡献。
 
     **不回落**：任一评审模型不可用 → 返回 unavailable，绝不悄悄用少数模型顶替。
@@ -1284,7 +1284,26 @@ def review_v6_evaluate(req: ReviewV6Request):
       · `review_v6.pairwise_skipped` = `{"skipped": true, "code": "no_baseline", ...}`；
       · 顶层同时镜像 `pairwise` / `pairwise_skipped`，方便调用方一眼判断。
     需要 pairwise 主读数时，请在请求体里传 `baseline`。
+
+    **内容寻址缓存**：同一 (report, topic, baseline) 默认复用 7 天内的缓存结果，
+    返回体带 `cached=true` + `cache_age_sec`；`?refresh=1` 强制重算（`cached=false`）。
+    缓存读写失败不影响评审本身。
     """
+    _cache = None
+    cache_key = ""
+    try:
+        import review_cache as _cache
+        cache_key = _cache.key_for(req.report, req.topic, req.baseline)
+        if not refresh and cache_key:
+            hit = _cache.get(cache_key)
+            if hit is not None:
+                resp = dict(hit)
+                resp["cached"] = True
+                resp["cache_age_sec"] = _cache.age_sec(cache_key)
+                return resp
+    except Exception:
+        _cache = None
+        cache_key = ""
     try:
         import review_v6 as _v6
     except Exception as e:
@@ -1299,7 +1318,7 @@ def review_v6_evaluate(req: ReviewV6Request):
             _gates_record_v6(out)
         except Exception:
             pass
-        return {"ok": True, "review_v6": out,
+        resp = {"ok": True, "review_v6": out,
                 # 2026-11-21（Bug 4）：pairwise 语义镜像到顶层（只新增字段）。
                 # 不传 baseline 时 pairwise=null、pairwise_skipped 带 no_baseline。
                 "pairwise": out.get("pairwise"),
@@ -1309,6 +1328,13 @@ def review_v6_evaluate(req: ReviewV6Request):
                 "anchors_scope": out.get("anchors_scope"),
                 "anchors_cached": out.get("anchors_cached"),
                 "anchors_cached_at": out.get("anchors_cached_at")}
+        resp["cached"] = False
+        if _cache is not None and cache_key:
+            try:
+                _cache.put(cache_key, resp)
+            except Exception:
+                pass
+        return resp
     except Exception as e:
         # 硬校验失败（如"锚点未过却产出了分数"）会走到这里 —— 必须如实报错，不得静默
         return {"ok": False, "v6": True,
