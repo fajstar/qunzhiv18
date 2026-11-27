@@ -47,12 +47,27 @@ git status       = M .gitignore / M guard.py / M main_gateway.py / M review_v6.p
 
 若上述 sha256 变了，说明服务器代码已被改动——**部署前必须重新确认**，不要沿用本文件里的判断。
 
-## 本次已完成（非侵入）
+## 本次已完成（2026-11-27 合并 + 验收）
 
 | 动作 | 结果 |
 |---|---|
-| 上传 `review_cache.py` | ✅ 远端 sha256 `14ee1be8…` 与本地一致 |
-| 上传 `tests/test_review_cache.py` | ✅ 远端 sha256 `04798f5b…` |
-| 远端跑测试 | ✅ **8 passed in 0.08s** |
-| `main_gateway.py` | ✅ **未改动**（sha256 部署前后相同） |
-| 缓存是否已生效 | ❌ **还没**——需要按 WIRING 手工合并两处才生效 |
+| 上传 `review_cache.py` | ✅ 远端 sha256 `14ee1be8…` |
+| 上传 `tests/test_review_cache.py` | ✅ 远端 8 passed in 0.08s |
+| 合并 `main_gateway.py`（3 处锚点，各命中 1 次） | ✅ +27 行 / +915 字符 |
+| 合并前 sha256 | `ac91eba1c7590b70…`（8770 行） |
+| 合并后 sha256 | `7c291d6ac5cb1c3d…`（8797 行） |
+| 备份 | `/home/ubuntu/qunzhi/app/main_gateway.py.bak_cache_20261127_133910` |
+| py_compile | ✅ COMPILE_OK |
+| 重启 `qunzhi-gateway` | ✅ active |
+| **实测缓存** | 第 1 次 `cached=false` → 第 2 次 `cached=true / age=0` ✅ |
+| 缓存文件 | `app/data/review_v6_cache/ff07b6a175b1a736be6b5b86.json`（11 KB） |
+
+回滚命令（如需）：
+
+```bash
+cp -a /home/ubuntu/qunzhi/app/main_gateway.py.bak_cache_20261127_133910       /home/ubuntu/qunzhi/app/main_gateway.py
+sudo systemctl restart qunzhi-gateway
+```
+
+> 注意：合并后服务器上的 `main_gateway.py` 与你原来的"未提交改动"**叠加**在一起了
+> （即：你的改动 + 本次缓存接线）。git status 仍显示 `M main_gateway.py`，这是预期的。
